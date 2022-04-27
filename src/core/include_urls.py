@@ -42,7 +42,8 @@ urlpatterns = [
     url(r'^utils/', include('utils.urls')),
     url(r'^workflow/', include('workflow.urls')),
     url(r'^discussion/', include('discussion.urls')),
-
+    url(r'^medialab_keywords/', include("medialab_keywords.urls") ),
+    
     # Root Site URLS
     url(r'^$', press_views.index, name='website_index'),
     url(r'^journals/$', press_views.journals, name='press_journals'),

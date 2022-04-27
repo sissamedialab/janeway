@@ -81,7 +81,7 @@ INSTALLED_APPS = [
     'utils',
     'install',
     'workflow',
-
+    'medialab_keywords',
 
     # 3rd Party
     'django_summernote',
