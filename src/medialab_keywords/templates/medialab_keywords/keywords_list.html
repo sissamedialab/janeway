@@ -1,0 +1,49 @@
+{% extends "xbase.html" %}
+{% load nav %}
+{% block title %}keywords{% endblock %}
+
+{% block sidebar %}Sidebar defined in the template{% endblock %}
+
+
+
+
+{% block contents %}
+
+
+<div style="width:400px; margin-left:auto; margin-right:auto; border:solid black 0px; font-size:10pt; font-family:helvetica;" >
+  
+{% for kg in keyword_groups %}
+
+<div style="margin-top:20px; margin-bottom:20px; border:solid black 0px;">
+  
+  <div style="border: gray dotted 1px; text-align:center; background:#FFFCD8; padding:3px; font-weight:bold;">{{ kg.groupName }}</div>
+  
+  {% for ksg in kg.keywordsubgroup_set.all %}
+  
+  <div style="width:300px; border: solid #AAAAAA 1px; margin-left:auto; margin-right:auto; margin-top:20px; text-align:center;">
+    <div style="border-bottom: solid #AAAAAA 1px; background:#DDDDDD; padding:3px;">
+      {{ ksg.subgroupName }}
+    </div>
+    <div style="text-align:left;">
+
+      <ul style="margin:3px; border:solid red 0px; padding-left:20px;">
+      {% for kwd in ksg.keyword_set.all %}
+      <li style="margin-top:5px">{{ kwd.keywordName }} </li>
+      {% endfor %}
+      </ul>
+      
+    </div>
+  </div>
+
+  {% endfor %}
+</div>
+
+{% endfor %}
+</div>
+
+{% endblock %}
+
+
+
+
+

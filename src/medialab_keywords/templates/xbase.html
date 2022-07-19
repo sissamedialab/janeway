@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>Journal submission {% block title %} title {% endblock %}</title>
+</head>
+
+<body>
+  
+<div id="sidebar">
+{% block sidebar %}
+This is not a real sidebar
+{% endblock %}
+</div>
+
+<div id="contents">
+    {% block contents %}{% endblock %}
+</div>
+    
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+
+Use this page to load the JHEP keywords in your database.
+<br><br>
+
+<form action="{% url 'medialab_keywords:load_kwds'%}" method="post">
+{% csrf_token %}
+<input type="submit" value="Load Keywords">
+</form>
