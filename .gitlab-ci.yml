@@ -1,0 +1,18 @@
+variables:
+  PIP: "/home/wjs/.virtualenvs/janeway-venv/bin/pip"
+  PIP-INDEX-URL: "https://gitlab.sissamedialab.it/api/v4/projects/60/packages/pypi/simple"
+
+# TODO: what about `manage.py makemigrations --merge`?
+
+deploy_staging:
+  stage: deploy
+  image: python:3.9
+  script:
+    - echo "Deploy to testing server"
+    - chmod og= $ID_RSA
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "( cd mg/janeway && \ git pull --ff-only https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.sissamedialab.it/medialab/janeway jcom %% \ $PIP install --index-url=$PIP-INDEX-URL -U wjs.jcom_profile wjs.user_search wjs.mgmt_cmds )"
+  environment:
+    name: jcom-test
+    url: http://griffo.sissamedialab.it:8000/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "jcom"
