@@ -2,6 +2,8 @@
 {% load bootstrap4 %}
 {% load i18n %}
 {% load recaptcha2 %}
+{% load hooks %}
+
 
 {% block title %}{% trans "Register" %}{% endblock title %}
 
@@ -22,22 +24,56 @@
                             <h5>{% trans "Register for an" %} {{ request.press.name }} {% trans "account" %}.</h5>
                             <p>{% trans "Password Rules" %}:</p>
                             <ul class="no-top-margin">
-                                <li>- {% blocktrans %}Your password should be {{ request.press.password_length }} characters long.{% endblocktrans %}</li>
-                                {% if request.press.password_upper %}<li>- {% blocktrans %}Your password should contain at least one upper case letter."{% endblocktrans %} %}</li>{% endif %}
-                                {% if request.press.password_number %}<li>- {% blocktrans %}Your password should contain at least one number." %}{% endblocktrans %}</li>{% endif %}
+                                <li>- {% blocktrans %}Your password should be {{ request.press.password_length }}
+                                    characters long.{% endblocktrans %}</li>
+                                {% if request.press.password_upper %}
+                                    <li>- {% blocktrans %}Your password should contain at least one upper case
+                                        letter."{% endblocktrans %} %}
+                                    </li>{% endif %}
+                                {% if request.press.password_number %}
+                                    <li>- {% blocktrans %}Your password should contain at least one number."
+                                        %}{% endblocktrans %}</li>{% endif %}
                             </ul>
-                            <p>{% blocktrans %}For more information read our <a href="#" data-toggle="modal" data-target="#passwordmodal">password guide</a>.{% endblocktrans %}</p>
+                            <p>{% blocktrans %}For more information read our
+                                <a href="#" data-toggle="modal" data-target="#passwordmodal">password guide</a>
+                                .{% endblocktrans %}</p>
 
-                            {% bootstrap_form form %}
-                            <p>{% trans "By registering an account you agree to our" %}
-                                {% if journal_settings.general.privacy_policy_url %}
-                                    <a href="{{ journal_settings.general.privacy_policy_url }}">{% trans "Privacy Policy" %}</a>
-                                {% else %}
-                                    <a href="{% url 'cms_page' "privacy" %}">{% trans "Privacy Policy" %}</a>
-                                {% endif %}
-                            </p>
+                            <div class="form-group">
+                                {% bootstrap_field form.email %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.salutation %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.first_name %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.middle_name %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.last_name %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.department %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.institution %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.country %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.password_1 %}
+                            </div>
+                            <div class="form-group">
+                                {% bootstrap_field form.password_2 %}
+                            </div>
+                            {% hook 'extra_corefields' %}
+                            <div class="form-group">
+                                {% bootstrap_field form.captcha %}
+                            </div>
                             {% if journal_settings.general.display_register_page_notice %}
-                            {{ journal_settings.general.register_page_notice|safe }}
+                                {{ journal_settings.general.register_page_notice|safe }}
                             {% endif %}
                             <p>
                                 <button type="submit"

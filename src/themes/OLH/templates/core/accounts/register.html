@@ -67,7 +67,6 @@
                                 {{ form.country|foundation }}
                             </div>
                         </div>
-                        {% hook 'extra_corefields' %}
                         <div class="row">
                             <div class="large-6 columns">
                                 {{ form.password_1|foundation }}
@@ -76,17 +75,10 @@
                                 {{ form.password_2|foundation }}
                             </div>
                         </div>
+                        {% hook 'extra_corefields' %}
                         <div class="row">
                             <div class="large-12 columns">
                                 {{ form.captcha|foundation }}
-                                <br/>
-                                <p>{% trans "By registering an account you agree to our" %}
-                                  {% if journal_settings.general.privacy_policy_url %}
-                                    <a href="{{ journal_settings.general.privacy_policy_url }}">{% trans "Privacy Policy" %}</a>
-                                  {% else %}
-                                    <a href="{% url 'cms_page' "privacy" %}">{% trans "Privacy Policy" %}</a>
-                                  {% endif %}
-                                </p>
                             </div>
                         </div>
                         {% if journal_settings.general.display_register_page_notice %}
