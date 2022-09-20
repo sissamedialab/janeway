@@ -100,6 +100,7 @@ INSTALLED_APPS = [
 
     # Forms
     'django.forms',
+    'wjs.jcom_profile'
 ]
 
 INSTALLED_APPS += plugin_installed_apps.load_plugin_apps(BASE_DIR)
