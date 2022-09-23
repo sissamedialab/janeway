@@ -1,0 +1,23 @@
+variables:
+  PIP: "/home/wjs/.virtualenvs/j1-venv/bin/pip"
+  PIP_INDEX_URL: "https://gitlab.sissamedialab.it/api/v4/projects/60/packages/pypi/simple"
+  # touch this file to restart the uwsgi server
+  UWSGI_VASSAL: "/home/wjs/uwsgi/janeway.ini"
+
+# TODO: what about `manage.py makemigrations --merge`?
+# TODO: restart uwsgi (see uwsgi-emperor)
+
+deploy_staging:
+  stage: deploy
+  tags:
+    - inasset
+  image: python:3.9
+  script:
+    - echo "Deploy to testing server"
+    - chmod og= $ID_RSA
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "( cd janeway && git checkout jcom && git pull --ff-only https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.sissamedialab.it/wjs/janeway jcom && $PIP install --index-url=$PIP_INDEX_URL -U wjs.jcom_profile wjs.user_search wjs.mgmt_cmds && touch --no-dereference $UWSGI_VASSAL )"
+  environment:
+    name: jcom-test
+    url: http://griffo.sissamedialab.it:8000/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "jcom"
