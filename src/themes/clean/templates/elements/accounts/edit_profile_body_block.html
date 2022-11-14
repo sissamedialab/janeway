@@ -9,7 +9,7 @@
                     instructions in the verfication email.{% endblocktrans %}
                     <strong>{% trans 'Note' %}: </strong>
                     {% blocktrans %}Changing your email address will also change your username
-                    as these are one and the same.{% endblocktrans %}</p>
+                        as these are one and the same.{% endblocktrans %}</p>
                 <form method="POST">
                     {% csrf_token %}
                     <div class="form-group">
@@ -18,7 +18,7 @@
                         <input type="email" name="email_address"
                                class="form-control"
                                placeholder="janeway@voyager.com"
-                                aria-labelledby="changeemail">
+                               aria-labelledby="changeemail">
                     </div>
                     <button type="submit" name="email" class="btn btn-warning">
                         {% trans 'Update Email Address' %}
@@ -39,7 +39,9 @@
                     {% csrf_token %}
                     <div class="row">
                         <div class="col-md-4">
-                            <label for="current_password">{% trans 'Current Password' %}</label><input type="password" name="current_password" id="current_password">
+                            <label for="current_password">{% trans 'Current Password' %}</label><input type="password"
+                                                                                                       name="current_password"
+                                                                                                       id="current_password">
                         </div>
                         <div class="col-md-4">
                             <label for="new_password_one">{% trans 'Enter New Password' %}</label>
@@ -55,6 +57,19 @@
                             class="btn btn-warning">{% trans 'Update Password' %}
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-block">
+                <h5>{% trans 'Edit assignment parameters' %}</h5>
+                <p>{% trans 'Go to your your assignment parameters by clicking the button below.' %}.</p>
+                <a href="{% url 'assignment_parameters' %}" class="btn btn-warning" style="text-decoration: none">Assignment
+                    parameters</a>
             </div>
         </div>
     </div>
