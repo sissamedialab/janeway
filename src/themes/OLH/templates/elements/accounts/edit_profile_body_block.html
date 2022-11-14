@@ -1,4 +1,6 @@
 {% load i18n %}
+{% load hooks %}
+
 
 <div class="row">
     <div class="medium-12 medium-centered large-12 large-centered columns login">
@@ -55,7 +57,7 @@
         <div class="callout">
             <h5>{% trans "Edit assignment parameters" %}</h5>
             <p>{% trans 'Go to your your assignment parameters by clicking the button below.' %}.</p>
-            <a href="{% url 'assignment_parameters' %}" class="warning button">Assignment parameters</a>
+            {% hook "button_link" %}
         </div>
     </div>
 </div>

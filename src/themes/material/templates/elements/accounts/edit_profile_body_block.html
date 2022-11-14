@@ -60,7 +60,7 @@
         </div>
     </div>
 </div>
-{% hook 'button_link' %}
+
 <div class="row">
     <div class="col m12">
         <div class="card">
@@ -98,7 +98,7 @@
             <div class="card-content">
                 <span class="card-title">{% trans "Edit assignment parameters" %}</span>
                 <p>{% trans "Go to your your assignment parameters by clicking the button below." %}</p>
-                <a href="{% url 'assignment_parameters' %}" class="btn btn-primary">Assignment parameters</a>
+                {% hook "button_link" %}
             </div>
         </div>
     </div>
