@@ -1,3 +1,6 @@
+{% load i18n roles %}
+{% user_has_role request 'reader' as reader %}
+{% user_has_role request 'editor' as editor %}
 {% load hooks %}
 
 <div class="row">
@@ -64,6 +67,7 @@
     </div>
 </div>
 
+{% if editor %}
 <div class="row">
     <div class="col-md-12">
         <div class="card">
@@ -75,6 +79,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <div class="row">
     <div class="col-md-12">

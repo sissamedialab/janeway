@@ -1,5 +1,6 @@
 {% load i18n roles %}
 {% user_has_role request 'reader' as reader %}
+{% user_has_role request 'editor' as editor %}
 {% load hooks %}
 
 <div class="row">
@@ -91,19 +92,19 @@
         </div>
     </div>
 </div>
-
-<div class="row">
-    <div class="col m12">
-        <div class="card">
-            <div class="card-content">
-                <span class="card-title">{% trans "Edit assignment parameters" %}</span>
-                <p>{% trans "Go to your your assignment parameters by clicking the button below." %}</p>
-                {% hook "button_link" %}
+{% if editor %}
+    <div class="row">
+        <div class="col m12">
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">{% trans "Edit assignment parameters" %}</span>
+                    <p>{% trans "Go to your your assignment parameters by clicking the button below." %}</p>
+                    {% hook "button_link" %}
+                </div>
             </div>
         </div>
     </div>
-</div>
-
+{% endif %}
 <div class="row">
     <div class="col m12">
         <div class="card">
