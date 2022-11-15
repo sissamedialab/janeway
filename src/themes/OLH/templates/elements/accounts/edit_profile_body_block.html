@@ -54,16 +54,16 @@
     </div>
 </div>
 
-{% if editor %}
-<div class="row">
-    <div class="medium-12 medium-centered large-12 large-centered columns login">
-        <div class="callout">
-            <h5>{% trans "Edit assignment parameters" %}</h5>
-            <p>{% trans 'Go to your your assignment parameters by clicking the button below.' %}.</p>
-            {% hook "button_link" %}
+{% if editor and request.journal %}
+    <div class="row">
+        <div class="medium-12 medium-centered large-12 large-centered columns login">
+            <div class="callout">
+                <h5>{% trans "Edit assignment parameters" %}</h5>
+                <p>{% trans 'Go to your your assignment parameters by clicking the button below.' %}.</p>
+                {% hook "button_link" %}
+            </div>
         </div>
     </div>
-</div>
 {% endif %}
 
 <div class="row">
