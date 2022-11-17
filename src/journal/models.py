@@ -82,7 +82,13 @@ class Journal(AbstractSiteModel):
     ))
     current_issue = models.ForeignKey('Issue', related_name='current_issue', null=True, blank=True,
                                       on_delete=models.SET_NULL)
-    carousel = models.OneToOneField('carousel.Carousel', related_name='journal', null=True, blank=True)
+    carousel = models.OneToOneField(
+        'carousel.Carousel',
+        related_name='journal',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
     thumbnail_image = models.ForeignKey(
         'core.File',
         null=True,
@@ -573,6 +579,7 @@ class Issue(AbstractLastModifiedModel):
             " url for this issue. e.g: 'winter-special-issue'."
         ),
     )
+
     doi = models.CharField(
         max_length=255,
         blank=True,
@@ -584,6 +591,16 @@ class Issue(AbstractLastModifiedModel):
                   'entered manually.',
         )
 
+    isbn = models.CharField(
+        max_length=28,
+        blank=True,
+        null=True,
+        verbose_name="ISBN",
+        help_text=ugettext(
+            "An ISBN is relevant for non-serial collections such as"
+            " conference proceedings"
+        ),
+    )
 
     @property
     def hero_image_url(self):

@@ -15,7 +15,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, logout, login
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.shortcuts import render, get_object_or_404, redirect, Http404
 from django.template.defaultfilters import linebreaksbr
 from django.utils import timezone
@@ -172,9 +172,25 @@ def user_login_orcid(request):
                     return redirect(reverse('website_index'))
 
             except models.Account.DoesNotExist:
-                # Set Token and Redirect
+                # Lookup ORCID email addresses
+                orcid_details = orcid.get_orcid_record_details(orcid_id)
+                for email in orcid_details.get("emails"):
+                    candidates = models.Account.objects.filter(email=email)
+                    if candidates.exists():
+                        # Store ORCID for future authentication requests
+                        candidates.update(orcid=orcid_id)
+                        login(request, candidates.first())
+                        if request.GET.get('next'):
+                            return redirect(request.GET.get('next'))
+                        elif request.journal:
+                            return redirect(reverse('core_dashboard'))
+                        else:
+                            return redirect(reverse('website_index'))
+
+                # Prepare ORCID Token for registration and redirect
                 models.OrcidToken.objects.filter(orcid=orcid_id).delete()
                 new_token = models.OrcidToken.objects.create(orcid=orcid_id)
+
                 return redirect(reverse('core_orcid_registration', kwargs={'token': new_token.token}))
         else:
             messages.add_message(
@@ -278,12 +294,19 @@ def register(request):
     :param request: HttpRequest object
     :return: HttpResponse object
     """
+    initial = {}
     token, token_obj = request.GET.get('token', None), None
     if token:
         token_obj = get_object_or_404(models.OrcidToken, token=token)
+        orcid_details = orcid.get_orcid_record_details(token_obj.orcid)
+        initial["first_name"] = orcid_details.get("first_name")
+        initial["last_name"] = orcid_details.get("last_name")
+        if orcid_details.get("emails"):
+            initial["email"] = orcid_details["emails"][0]
 
     form = forms.RegistrationForm(
         journal=request.journal,
+        initial=initial,
     )
 
     if request.POST:
@@ -304,6 +327,17 @@ def register(request):
                 new_user.orcid = token_obj.orcid
                 new_user.save()
                 token_obj.delete()
+                # If the email matches the user email on ORCID, log them in
+                if new_user.email == initial.get("email"):
+                    new_user.is_active = True
+                    new_user.save()
+                    login(request, new_user)
+                    if request.GET.get('next'):
+                        return redirect(request.GET.get('next'))
+                    elif request.journal:
+                        return redirect(reverse('core_dashboard'))
+                    else:
+                        return redirect(reverse('website_index'))
             else:
                 new_user = form.save()
 
@@ -1630,6 +1664,7 @@ def plugin_list(request):
     """
 
     plugin_list = list()
+    failed_to_load = []
 
     if request.journal:
         plugins = util_models.Plugin.objects.filter(
@@ -1647,19 +1682,25 @@ def plugin_list(request):
         try:
             module_name = "{0}.{1}.plugin_settings".format("plugins", plugin.name)
             plugin_settings = import_module(module_name)
+            manager_url = getattr(plugin_settings, 'MANAGER_URL', '')
+            if manager_url:
+                reverse(manager_url)
             plugin_list.append(
                 {'model': plugin,
-                 'manager_url': getattr(plugin_settings, 'MANAGER_URL', ''),
+                 'manager_url': manager_url,
                  'name': getattr(plugin_settings, 'PLUGIN_NAME')
                  },
             )
-        except ImportError as e:
+        except (ImportError, NoReverseMatch) as e:
+            failed_to_load.append(plugin)
             logger.error("Importing plugin %s failed: %s" % (plugin, e))
-            pass
+            logger.exception(e)
+
 
     template = 'core/manager/plugins.html'
     context = {
         'plugins': plugin_list,
+        'failed_to_load': failed_to_load,
     }
 
     return render(request, template, context)
