@@ -8,7 +8,7 @@ include:
     file: '.gitlab-ci-pkg-deploy.yml'
 
 
-deploy_to_test:
+deploy_to_dev:
   extends:
     - .deploy
   tags:
@@ -16,12 +16,27 @@ deploy_to_test:
   variables:
     SERVER_IP: "$TEST_SERVER_IP"
     SERVER_USER: "$TEST_SERVER_USER"
-    DEPLOY_CMD: "deploy-janeway"
+    DEPLOY_CMD: "deploy-dev-janeway"
   environment:
-    name: jcom-test
-    url: https://janeway-test.sissamedialab.it/
+    name: development
+    url: https://serra-dev-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "jcom"
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+
+
+deploy_to_pp:
+  extends:
+    - .deploy
+  tags:
+    - inasset
+  variables:
+    SERVER_IP: "$TEST_SERVER_IP"
+    SERVER_USER: "$TEST_SERVER_USER"
+    DEPLOY_CMD: "deploy-pp-janeway"
+  environment:
+    name: pre-production
+    url: https://serra-pp-journals.wjapp.it/
+  when: manual
 
 
 deploy_to_production:
@@ -32,14 +47,14 @@ deploy_to_production:
   variables:
     SERVER_IP: "$PROD_SERVER_IP"
     SERVER_USER: "$PROD_SERVER_USER"
-    DEPLOY_CMD: "deploy-janeway"
+    DEPLOY_CMD: "deploy-prod-janeway"
   environment:
     name: production
     url: https://journals.sissamedialab.it/
   when: manual
 
 
-build_janeway_image:
+.build_janeway_image:
   stage: build
 
   # Important: runners that should support dind must have
@@ -59,8 +74,6 @@ build_janeway_image:
   # I wasn't able to find a way to use the group-level container registry from CI/CD
   # See https://gitlab.com/gitlab-org/gitlab/-/issues/218285
   # So here I just use the project's registry.
-  # TODO: verify that other wjs-profile-project can pull from this registry
-  # (the image is used in it's test stage)
   variables:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway"
 
@@ -72,8 +85,21 @@ build_janeway_image:
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker pull $TAG || true
-    - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
+    - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --build-arg BRANCH=$CI_COMMIT_BRANCH --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
     - docker push $TAG
 
+build_janeway_image_wjs_production:
+  extends:
+    - .build_janeway_image
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:production"
   rules:
-    - if: $CI_COMMIT_BRANCH == "jcom"
+    - if: $CI_COMMIT_BRANCH == "wjs-production"
+
+build_janeway_image_wjs_develop:
+  extends:
+    - .build_janeway_image
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-develop" || $CI_COMMIT_BRANCH == "jcom-1.5"
