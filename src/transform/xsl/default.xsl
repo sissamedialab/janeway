@@ -1423,7 +1423,18 @@
                 <div class="fig-expansion">
                     <div class="fig-inline-img">
                         <a href="{@xlink:href}" class="figure-expand-popup" title="{$caption}">
-				<img data-img="{$graphics}" src="{@xlink:href}" alt="{$caption}" class="responsive-img" />
+      <img data-img="{$graphics}" src="{@xlink:href}" class="responsive-img">
+        <xsl:attribute name="alt">
+          <xsl:choose>
+            <xsl:when test="../alt-text">
+              <xsl:value-of select="../alt-text/text()" />
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:value-of select="../label/text()" />
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:attribute>
+      </img>
                         </a>
                     </div>
                 </div>
@@ -3560,6 +3571,11 @@
                     <xsl:value-of select="@style"/>
                 </xsl:attribute>
             </xsl:if>
+            <xsl:if test="@class">
+                <xsl:attribute name="class">
+                    <xsl:text>styled-content </xsl:text><xsl:value-of select="@class"/>
+                </xsl:attribute>
+            </xsl:if>
             <xsl:apply-templates/>
         </span>
     </xsl:template>
@@ -3655,20 +3671,11 @@
     </xsl:template>
 
     <xsl:template match="code">
-        <xsl:choose>
-            <xsl:when test="@xml:space = 'preserve'">
-                <pre>
-                    <code>
-                        <xsl:apply-templates/>
-                    </code>
-                </pre>
-            </xsl:when>
-            <xsl:otherwise>
-                <code>
-                    <xsl:apply-templates/>
-                </code>
-            </xsl:otherwise>
-        </xsl:choose>
+       <pre>
+         <code>
+           <xsl:apply-templates/>
+         </code>
+       </pre>
     </xsl:template>
 
     <!-- END - general format -->
@@ -3695,6 +3702,7 @@
     <xsl:template match="author-notes/corresp/label"/>
     <xsl:template match="abstract/title"/>
     <xsl:template match="fig/graphic"/>
+    <xsl:template match="fig/alt-text"/>
     <xsl:template match="fig-group//object-id | fig-group//graphic | fig//label"/>
     <xsl:template match="ack/title"/>
     <xsl:template match="ref//year | ref//article-title | ref//fpage | ref//volume | ref//source | ref//pub-id | ref//lpage | ref//comment | ref//supplement | ref//person-group[@person-group-type='editor'] | ref//edition | ref//publisher-loc | ref//publisher-name | ref//ext-link"/>

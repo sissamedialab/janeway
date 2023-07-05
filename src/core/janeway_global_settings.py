@@ -25,6 +25,9 @@ from django.contrib import messages
 
 from core import plugin_installed_apps
 
+# X_FRAME_OPTIONS must be set to SAMEORIGIN or the embedded PDF viewer will not work
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(os.path.join(BASE_DIR, "plugins"))
@@ -52,12 +55,13 @@ INSTALLED_APPS = [
     'modeltranslation',
     'django.contrib.admin',
     'django.contrib.auth',
-    'django.contrib.contenttypes',
+
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django.contrib.postgres',
+    'django.contrib.contenttypes',
 
     # Installed Apps
     # Install APP is loaded first to ensure all existing models and migrations
@@ -88,16 +92,13 @@ INSTALLED_APPS = [
     # 3rd Party
     'mozilla_django_oidc',
     'django_summernote',
-    'markdown_deux',
-    'raven.contrib.django.raven_compat',
     'bootstrap4',
     'rest_framework',
     'foundationform',
     'materialize',
-    'snowpenguin.django.recaptcha2',
+    'captcha',
     'simplemathcaptcha',
     'hijack',
-    'compat',
     'hcaptcha',
 
     # Forms
@@ -107,12 +108,11 @@ INSTALLED_APPS = [
 INSTALLED_APPS += plugin_installed_apps.load_plugin_apps(BASE_DIR)
 INSTALLED_APPS += plugin_installed_apps.load_homepage_element_apps(BASE_DIR)
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -126,6 +126,7 @@ MIDDLEWARE_CLASSES = (
     'core.middleware.GlobalRequestMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'journal.middleware.LanguageMiddleware',
+    'hijack.middleware.HijackUserMiddleware',
 )
 
 ROOT_URLCONF = 'core.urls'
@@ -152,6 +153,7 @@ TEMPLATES = [
                 'core.context_processors.press',
                 'core.context_processors.active',
                 'core.context_processors.navigation',
+                'core.context_processors.version',
                 'django_settings_export.settings_export',
                 'django.template.context_processors.i18n'
             ],
@@ -238,16 +240,17 @@ LOCALE_PATHS = [
 ] + plugin_installed_apps.load_plugin_locales(BASE_DIR)
 
 
-def ugettext(s):
+def gettext(s):
     return s
 
 
 LANGUAGES = (
-    ('en', ugettext('English')),
-    ('fr', ugettext('French')),
-    ('de', ugettext('German')),
-    ('nl', ugettext('Dutch')),
-    ('cy', ugettext('Welsh')),
+    ('en', gettext('English')),
+    ('en-us', gettext('English (US)')),
+    ('fr', gettext('French')),
+    ('de', gettext('German')),
+    ('nl', gettext('Dutch')),
+    ('cy', gettext('Welsh')),
 )
 
 MODELTRANSLATION_DEFAULT_LANGUAGE = 'en'
@@ -302,55 +305,6 @@ SILENCED_SYSTEM_CHECKS = (
     'fields.W340',
 )
 
-'''
-# This section should only be enabled if you intend to use Sentry for error reporting.
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'root': {
-        'level': 'WARNING',
-        'handlers': ['sentry'],
-    },
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s '
-                      '%(process)d %(thread)d %(message)s'
-        },
-    },
-    'handlers': {
-        'sentry': {
-            'level': 'ERROR', # To capture more than ERROR, change to WARNING, INFO, etc.
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
-            'tags': {'custom-tag': 'x'},
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose'
-        }
-    },
-    'loggers': {
-        'django.db.backends': {
-            'level': 'ERROR',
-            'handlers': ['console'],
-            'propagate': False,
-        },
-        'raven': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-            'propagate': False,
-        },
-        'sentry.errors': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-            'propagate': False,
-        },
-    },
-}
-RAVEN_CONFIG = {
-    'dsn': '',
-}
-'''
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -419,12 +373,14 @@ MESSAGE_TAGS = {
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/login/'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = ''
-EMAIL_PORT = ''
-EMAIL_HOST_USER = ''
-EMAIL_HOST_PASSWORD = ''
-EMAIL_USE_TLS = True
+EMAIL_BACKEND = os.environ.get(
+    'JANEWAY_EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = os.environ.get("JANEWAY_EMAIL_HOST", '')
+EMAIL_PORT = os.environ.get("JANEWAY_EMAIL_PORT", '')
+EMAIL_HOST_USER = os.environ.get("JANEWAY_EMAIL_HOST_USER", '')
+EMAIL_HOST_PASSWORD = os.environ.get("JANEWAY_EMAIL_HOST_PASSWORD", '')
+EMAIL_USE_TLS = os.environ.get("JANEWAY_EMAIL_USE_TLS", True)
 DUMMY_EMAIL_DOMAIN = "@journal.com"
 
 # Settings for use with Mailgun
@@ -450,7 +406,7 @@ ORCID_TOKEN_URL = 'https://pub.orcid.org/oauth/token'
 ORCID_CLIENT_SECRET = ''
 ORCID_CLIENT_ID = ''
 
-
+SESSION_ENGINE = 'utils.sessions.janeway_db'
 SESSION_COOKIE_NAME = 'JANEWAYSESSID'
 
 S3_ACCESS_KEY = ''
@@ -571,6 +527,8 @@ CORE_THEMES = [
     'clean',
 ]
 INSTALLATION_BASE_THEME = 'OLH'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # Use pagination for all of our APIs based on Django REST Framework
 REST_FRAMEWORK = {
