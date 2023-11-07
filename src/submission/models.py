@@ -2047,8 +2047,6 @@ class Section(AbstractLastModifiedModel):
                   " (e.g: Article -> Articles)",
     )
 
-    objects = model_utils.JanewayMultilingualManager()
-
     class Meta:
         ordering = ('sequence',)
 
