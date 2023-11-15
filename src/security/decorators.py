@@ -374,6 +374,26 @@ def article_author_required(func):
     return wrapper
 
 
+def article_correspondence_author_author_required(func):
+    """ This decorator checks that a user is an author and is correspondence author of the article
+
+    :param func: the function to callback from the decorator
+    :return: either the function call or raises an Http404
+    """
+
+    @base_check_required
+    def wrapper(request, *args, **kwargs):
+        article_id = kwargs['article_id']
+        article = models.Article.get_article(request.journal, 'id', article_id)
+
+        if request.user.is_author(request) and article.correspondence_author == request.user:
+            return func(request, *args, **kwargs)
+        else:
+            deny_access(request)
+
+    return wrapper
+
+
 def proofreader_user_required(func):
     """ This decorator checks that a user is a proofreader
 

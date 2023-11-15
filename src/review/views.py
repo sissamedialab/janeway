@@ -35,7 +35,7 @@ from security.decorators import (
     file_user_required, article_decision_not_made, article_author_required,
     editor_is_not_author, senior_editor_user_required,
     section_editor_draft_decisions, article_stage_review_required,
-    any_editor_user_required
+    any_editor_user_required, article_correspondence_author_author_required
 )
 from submission import models as submission_models, forms as submission_forms
 from utils import models as util_models, ithenticate, shared, setting_handler
@@ -1825,7 +1825,7 @@ def edit_revision_request(request, article_id, revision_id):
     return render(request, template, context)
 
 
-@article_author_required
+@article_correspondence_author_author_required
 def do_revisions(request, article_id, revision_id):
     """
     Allows an Author to complete a revision request of an article.
