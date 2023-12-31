@@ -70,7 +70,7 @@ urlpatterns = [
     re_path(r'^article/(?P<article_id>\d+)/revisions/(?P<revision_id>\d+)/edit/$', views.edit_revision_request,
         name='edit_revision_request'),
     re_path(r'^article/(?P<article_id>\d+)/revisions/(?P<revision_id>\d+)/$', views.do_revisions,
-        name='do_revisions'),
+        name='do_revisions_legacy'),
     re_path(r'^article/(?P<article_id>\d+)/revisions/(?P<revision_id>\d+)/update/file/(?P<file_id>\d+)$',
         views.replace_file, name='revisions_replace_file'),
     re_path(r'^article/(?P<article_id>\d+)/revisions/(?P<revision_id>\d+)/upload/file/$',

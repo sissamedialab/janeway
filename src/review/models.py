@@ -527,6 +527,7 @@ def revision_type():
     return (
         (ED.MINOR_REVISIONS.value, 'Minor Revisions'),
         (ED.MAJOR_REVISIONS.value, 'Major Revisions'),
+        (ED.TECHNICAL_REVISION.value, 'Technical Revisions'),
     )
 
 
