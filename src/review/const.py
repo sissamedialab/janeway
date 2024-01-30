@@ -10,7 +10,7 @@ class EditorialDecisions(EnumContains):
     UNDECLINE = 'undecline'
     MINOR_REVISIONS = 'minor_revisions'
     MAJOR_REVISIONS = 'major_revisions'
-    TECHNICAL_REVISION = "techRevision"
+    TECHNICAL_REVISIONS = "tech_revisions"
 
 
 class ReviewerDecisions(EnumContains):
