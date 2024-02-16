@@ -91,6 +91,16 @@ def get_setting(
     :default: If True, returns the default SettingValue when no journal specific
         value is present
     """
+    logger.critical(f"HERE ({setting_name})")
+    if isinstance(setting_name, str):
+        if setting_name.find("prophy") > -1:
+            logger.debug("SEEEEEEEE BELOWWWWWWWWWWW!!!!!!!")
+            import inspect
+            callee = inspect.stack()[2]
+            logger.warning(f"requested {type(setting_name)} {setting_name} by {callee.function}:{callee.lineno}; {callee.code_context}")
+    else:
+        logger.error(f"{setting_name} is NOT a string")
+
     try:
         setting = core_models.Setting.objects.get(
             name=setting_name,
@@ -120,7 +130,7 @@ def get_setting(
                     journal = None
                     return get_setting(
                         setting_group_name,
-                        setting,
+                        setting_name,
                         journal,
                         create,
                     )
@@ -230,7 +240,7 @@ def get_email_subject_setting(
 ):
     try:
         setting = core_models.Setting.objects.get(name=setting_name)
-        return get_setting(setting_group, setting, journal, create=False, default=True).value
+        return get_setting(setting_group, setting_name, journal, create=False, default=True).value
     except (core_models.Setting.DoesNotExist, AttributeError):
         return setting_name
 
