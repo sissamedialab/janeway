@@ -1,4 +1,5 @@
-# A docker image with Janeway ready to `runserver` from branch jcom.
+# A docker image with Janeway ready to `runserver` from branch jcom
+# and with BB typesetting plugin linked into Janeway's plugins folder.
 FROM debian:11-slim
 # The two cache mounts seem to have no effect
 # (at least when the image is build from a dind in a CI/CD job)
@@ -25,4 +26,6 @@ RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
     # sed -i 's/jsmin.*/jsmin/' requirements.txt && \
     sed -i '/mysqlclient/d' requirements.txt && \
     pip install 'setuptools<58' && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt && \
+    cd / && git clone https://github.com/BirkbeckCTP/typesetting@v1.3.0-RC-1 && \
+    ln -s /typesetting /janeway/plugins/
