@@ -22,5 +22,5 @@ RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
     sed -i '/mysqlclient/d' requirements.txt && \
     pip install 'setuptools<58' && \
     pip install -r requirements.txt && \
-    cd / && git clone https://github.com/BirkbeckCTP/typesetting@v1.3.0-RC-1 && \
+    cd / && git clone --branch v1.3.0-RC-1 --single-branch https://github.com/BirkbeckCTP/typesetting && \
     ln -s /typesetting /janeway/plugins/

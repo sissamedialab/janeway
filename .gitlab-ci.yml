@@ -1,3 +1,10 @@
+default:
+  cache:
+    key: cache-default
+    paths:
+      - .cache
+      - /var/cache
+
 stages:
   - build
   - deploy
