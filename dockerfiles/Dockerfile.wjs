@@ -13,12 +13,7 @@ RUN --mount=type=cache,mode=0755,target=/var/cache/apt \
     apt-get install -y python3 pip && \
     apt-get install -y git && \
     apt-get install -y mariadb-client && \
-    apt-get install -y libssl-dev && \
-    apt-get install wget && \
-    wget https://mirror.nextlayer.at/mariadb/repo/10.11/debian/pool/main/m/mariadb/libmariadb3_10.11.4+maria~deb11_amd64.deb && \
-    wget https://mirror.nextlayer.at/mariadb/repo/10.11/debian/pool/main/m/mariadb/libmariadb-dev_10.11.4+maria~deb11_amd64.deb && \
-    dpkg -i libmariadb3_10.11.4+maria~deb11_amd64.deb && \
-    dpkg -i libmariadb-dev_10.11.4+maria~deb11_amd64.deb
+    apt-get install -y libssl-dev
 RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
     git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.sissamedialab.it/wjs/janeway.git && \
     cd janeway && \
