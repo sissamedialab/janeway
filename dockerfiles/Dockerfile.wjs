@@ -20,10 +20,10 @@ RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
     git checkout origin/${BRANCH} && \
     # sed -i 's/jsmin.*/jsmin/' requirements.txt && \
     sed -i '/mysqlclient/d' requirements.txt && \
-    pip install 'setuptools<58'
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
+    pip install 'setuptools<58'  && \
+    echo "Installing Janeway requirements..." && \
     pip install -r requirements.txt
 RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
-    cd / && git clone --branch v1.3.0-RC-1 --single-branch https://github.com/BirkbeckCTP/typesetting
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
+    echo "Cloning typesetting plugin at tag v1.3.0-RC-1..."
+    cd / && git clone --branch v1.3.0-RC-1 --single-branch https://github.com/BirkbeckCTP/typesetting && \
     ln -s /typesetting /janeway/plugins/
