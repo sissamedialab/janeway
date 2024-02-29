@@ -26,4 +26,4 @@ RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
 RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
     echo "Cloning typesetting plugin at tag v1.3.0-RC-1..." && \
     cd / && git clone --branch v1.3.0-RC-1 --single-branch https://github.com/BirkbeckCTP/typesetting && \
-    ln -s /typesetting /janeway/plugins/
+    ln -s /typesetting /janeway/src/plugins/
