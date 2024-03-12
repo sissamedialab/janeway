@@ -13,17 +13,17 @@ RUN --mount=type=cache,mode=0755,target=/var/cache/apt \
     apt-get install -y python3 pip && \
     apt-get install -y git && \
     apt-get install -y mariadb-client && \
-    apt-get install -y libssl-dev
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
+    apt-get install -y libmariadb-dev && \
+    apt-get install -y libssl-dev && \
+    echo "Cloning Janeway code..." && \
     git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.sissamedialab.it/wjs/janeway.git && \
     cd janeway && \
     git checkout origin/${BRANCH} && \
+    echo "Installing Janeway requirements..." && \
     # sed -i 's/jsmin.*/jsmin/' requirements.txt && \
     sed -i '/mysqlclient/d' requirements.txt && \
     pip install 'setuptools<58'  && \
-    echo "Installing Janeway requirements..." && \
-    pip install -r requirements.txt
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip  \
+    pip install -r requirements.txt && \
     echo "Cloning typesetting plugin at tag v1.3.0-RC-1..." && \
     cd / && git clone --branch v1.3.0-RC-1 --single-branch https://github.com/BirkbeckCTP/typesetting && \
     ln -s /typesetting /janeway/src/plugins/
