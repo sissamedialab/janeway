@@ -95,18 +95,10 @@ deploy_to_production:
     - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --build-arg BRANCH=$CI_COMMIT_BRANCH --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
     - docker push $TAG
 
-build_janeway_image_wjs_production:
-  extends:
-    - .build_janeway_image
-  variables:
-    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:production"
-  rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-production" || $CI_COMMIT_BRANCH == "jcom"
-
 build_janeway_image_wjs_develop:
   extends:
     - .build_janeway_image
   variables:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop" || $CI_COMMIT_BRANCH == "jcom-1.5"
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
