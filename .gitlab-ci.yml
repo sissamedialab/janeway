@@ -110,9 +110,3 @@ build_janeway_image_wjs_develop:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop" || $CI_COMMIT_BRANCH == "jcom-1.5"
-
-temporary_build_janeway_image_72:
-  extends:
-    - .build_janeway_image
-  variables:
-    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:72"
