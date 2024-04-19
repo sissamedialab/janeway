@@ -102,3 +102,12 @@ build_janeway_image_wjs_develop:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
+
+build_janeway_image_152:
+  extends:
+    - .build_janeway_image
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:1.5.2"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "feature/issue-537__build-janeway-image-1.5.2__usa-e-getta"
+      when: manual
