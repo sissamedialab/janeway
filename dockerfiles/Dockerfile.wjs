@@ -18,8 +18,8 @@ RUN --mount=type=cache,mode=0755,target=/var/cache/apt \
 RUN echo "Cloning Janeway code ${BRANCH}..." && \
     git clone --branch ${BRANCH} --single-branch https://github.com/sissamedialab/janeway.git && \
     cd /janeway && \
-    git checkout origin/${BRANCH}
-COPY requirements.txt /janeway/requirements.txt
+    git checkout origin/${BRANCH} && \
+    git pull
 RUN echo  "Installing Janeway requirements..." && \
     pip install -r /janeway/requirements.txt
 RUN echo "Cloning typesetting plugin at tag v1.3.0-RC-1..." && \
