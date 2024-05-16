@@ -1,6 +1,6 @@
 # A docker image with Janeway ready to `runserver` from branch jcom
 # and with BB typesetting plugin linked into Janeway's plugins folder.
-FROM debian:11-slim
+FROM python:3.10
 # The two cache mounts seem to have no effect
 # (at least when the image is build from a dind in a CI/CD job)
 ARG CI_JOB_TOKEN
@@ -9,22 +9,19 @@ ARG BRANCH
 ENV BRANCH ${BRANCH}
 RUN --mount=type=cache,mode=0755,target=/var/cache/apt \
     apt-get update && \
-    apt-get install -y file && \
-    apt-get install -y python3 pip && \
-    apt-get install -y git && \
-    apt-get install -y mariadb-client && \
-    apt-get install -y libmariadb-dev && \
-    apt-get install -y libssl-dev && \
-    apt-get install -y postgresql-client
+    apt-get install -y file \
+        python3 python3-dev pip \
+        git \
+        mariadb-client libmariadb-dev \
+        libssl-dev \
+        postgresql-client
 RUN echo "Cloning Janeway code ${BRANCH}..." && \
     git clone --branch ${BRANCH} --single-branch https://github.com/sissamedialab/janeway.git && \
     cd /janeway && \
     git checkout origin/${BRANCH}
 COPY requirements.txt /janeway/requirements.txt
 RUN echo  "Installing Janeway requirements..." && \
-    # sed -i 's/jsmin.*/jsmin/' requirements.txt && \
-    sed -i '/mysqlclient/d' /janeway/requirements.txt && \
-    pip install -r /janeway/requirements.txt && \
-    echo "Cloning typesetting plugin at tag v1.3.0-RC-1..." && \
+    pip install -r /janeway/requirements.txt
+RUN echo "Cloning typesetting plugin at tag v1.3.0-RC-1..." && \
     cd / && git clone --branch master --single-branch https://github.com/BirkbeckCTP/typesetting && \
     ln -s /typesetting /janeway/src/plugins/
