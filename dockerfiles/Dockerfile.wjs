@@ -1,6 +1,6 @@
 # A docker image with Janeway ready to `runserver` from branch jcom
 # and with BB typesetting plugin linked into Janeway's plugins folder.
-FROM python:3.10
+FROM python:3.11
 # The two cache mounts seem to have no effect
 # (at least when the image is build from a dind in a CI/CD job)
 ARG CI_JOB_TOKEN
