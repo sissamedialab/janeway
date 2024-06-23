@@ -20,73 +20,20 @@
                     {% endif %}
                     <p>{% trans "Password Rules" %}:</p>
                     <ul class="no-top-margin browser-default">
-                        <li>- {% blocktrans with password_length=request.press.password_length %}Your password should be {{ password_length }} characters
-                            long.{% endblocktrans %}</li>
-                        {% if request.press.password_upper %}
-                            <li>- {% blocktrans %}Your password should contain at least one upper case
-                                letter."{% endblocktrans %} %}
-                            </li>{% endif %}
-                        {% if request.press.password_number %}
-                            <li>- {% blocktrans %}Your password should contain at least one number."
-                                %}{% endblocktrans %}</li>{% endif %}
+                        {% include "common/elements/password_rules.html" %}
                     </ul>
-                    <p>{% blocktrans %}For more information read our
-                        <a href="#passwordmodal" class="modal-trigger">password guide</a>
-                        .{% endblocktrans %}</p>
+                    <p>
+                        {% blocktrans trimmed %}For more information read our
+                        <a href="#" data-target="passwordmodal" class="modal-trigger">password
+                            guide</a>.{% endblocktrans %}
+                    </p>
                     <form method="POST">
                         {% include "elements/forms/errors.html" %}
                         {% csrf_token %}
-                        <div class="input-field col s12">
-                            {{ form.email }}
-                            <label for={{ form.email.id }}>Email</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.salutation }}
-                            <label for={{ form.salutation.id }}>Salutation</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.first_name }}
-                            <label for={{ form.first_name.id }}>First name</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.middle_name }}
-                            <label for={{ form.middle_name.id }}>Middle name</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.last_name }}
-                            <label for={{ form.last_name.id }}>Last name</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.department }}
-                            <label for={{ form.department.id }}>Department</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.institution }}
-                            <label for={{ form.institution.id }}>Institution</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.country }}
-                            <label for={{ form.country.id }}>Country</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.password_1 }}
-                            <label for={{ form.password_1.id }}>Password</label>
-                        </div>
-                        <div class="input-field col s12">
-                            {{ form.password_2 }}
-                            <label for={{ form.password_2.id }}>Repeat Password</label>
-                        </div>
-                        {% hook 'extra_corefields' %}
-                        <div class="col s12">
-                            {{ form.captcha }}
-                            <label for={{ form.captcha.id }}>Captcha</label>
-                        </div>
-                        <p>{% trans "By registering an account you agree to our" %}
-                          {% if journal_settings.general.privacy_policy_url %}
-                            <a href="{{ journal_settings.general.privacy_policy_url }}">{% trans "Privacy Policy" %}</a>
-                          {% else %}
-                            <a href="{% url 'cms_page' "privacy" %}">{% trans "Privacy Policy" %}</a>
-                          {% endif %}
+                        {{ form|materializecss }}
+                        <p>
+                            {% trans "By registering an account you agree to our" %}
+                            {% include "common/accounts/register_privacy_policy.html" %}
                         </p>
                         {% if journal_settings.general.display_register_page_notice %}
                         {{ journal_settings.general.register_page_notice|safe }}
