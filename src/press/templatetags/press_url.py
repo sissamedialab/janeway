@@ -64,7 +64,6 @@ def svg_or_image(image_field, css_class="", alt_text="", inline=False):
     mimetype = mimetypes.guess_type(image_field.path, strict=True)
 
     if not inline or not mimetype or mimetype[0] != 'image/svg+xml':
-        # fix proposed upstream with https://github.com/BirkbeckCTP/janeway/pull/4006
         return mark_safe(
             '<img src="{url}" class="{css_class}" alt="{alt_text}">'.format(
                 url=image_field.url,
