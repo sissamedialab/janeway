@@ -11,6 +11,7 @@ class EditorialDecisions(EnumContains):
     MINOR_REVISIONS = 'minor_revisions'
     MAJOR_REVISIONS = 'major_revisions'
     TECHNICAL_REVISIONS = "tech_revisions"
+    UNDER_APPEAL = 'under_appeal'
 
 
 class ReviewerDecisions(EnumContains):
