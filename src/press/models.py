@@ -11,13 +11,22 @@ import uuid
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
+from django.apps import apps
 
 from core import models as core_models
 from core.file_system import JanewayFileSystemStorage
-from core.model_utils import AbstractSiteModel
+from core.model_utils import (
+    AbstractSiteModel,
+    default_press_id,
+    JanewayBleachField,
+    SVGImageField,
+)
+from submission import models as submission_models
 from utils import logic
 from utils.function_cache import cache
 from utils.logger import get_logger
+from press import utils
 
 
 logger = get_logger(__name__)
@@ -67,10 +76,35 @@ class Press(AbstractSiteModel):
         verbose_name='Press Logo',
         on_delete=models.SET_NULL,
     )
-    footer_description = models.TextField(
+    description = JanewayBleachField(
+        blank=True,
+        verbose_name='Publisher description',
+        help_text='This will appear in web search results and on social media when the press URL is shared',
+    )
+    footer_description = JanewayBleachField(
+        blank=True,
+        verbose_name='Footer text',
+        help_text='Additional HTML for the press footer.',
+    )
+    journal_footer_text = JanewayBleachField(
+        blank=True,
+        verbose_name='Journal footer text',
+        help_text='Text that will appear in the footer '
+                  'of every journal, to display publisher '
+                  'address or other essential info. ',
+    )
+    secondary_image = SVGImageField(
+        upload_to=cover_images_upload_path,
         null=True,
         blank=True,
-        help_text='Additional HTML for the press footer.',
+        storage=fs,
+        help_text='Optional secondary logo for footer. '
+                  'Not implemented in all themes.',
+    )
+    secondary_image_url = models.URLField(
+        null=True,
+        blank=True,
+        help_text='Turns secondary image into a link.',
     )
     main_contact = models.EmailField(default='janeway@voyager.com', blank=False, null=False)
     theme = models.CharField(max_length=255, default='OLH', blank=False, null=False)
@@ -95,9 +129,8 @@ class Press(AbstractSiteModel):
         help_text="URL to an external privacy-policy, linked from the page"
         " footer. If blank, it links to the Janeway CMS page: /site/privacy.",
     )
-
-    password_reset_text = models.TextField(blank=True, null=True, default=press_text('reset'))
-    registration_text = models.TextField(blank=True, null=True, default=press_text('registration'))
+    password_reset_text = JanewayBleachField(blank=True, null=True, default=press_text('reset'))
+    registration_text = JanewayBleachField(blank=True, null=True, default=press_text('registration'))
 
     password_number = models.BooleanField(default=False, help_text='If set, passwords must include one number.')
     password_upper = models.BooleanField(default=False, help_text='If set, passwords must include one upper case.')
@@ -112,12 +145,12 @@ class Press(AbstractSiteModel):
         help_text='Enables the repository system for this press.',
         verbose_name='Enable repository system',
     )
-    preprints_about = models.TextField(blank=True, null=True)
-    preprint_start = models.TextField(blank=True, null=True)
+    preprints_about = JanewayBleachField(blank=True, null=True)
+    preprint_start = JanewayBleachField(blank=True, null=True)
     preprint_pdf_only = models.BooleanField(default=True, help_text='Forces manuscript files to be PDFs for Preprints.')
-    preprint_submission = models.TextField(blank=True, null=True, default=press_text('submission'))
-    preprint_publication = models.TextField(blank=True, null=True, default=press_text('publication'))
-    preprint_decline = models.TextField(blank=True, null=True, default=press_text('decline'))
+    preprint_submission = JanewayBleachField(blank=True, null=True, default=press_text('submission'))
+    preprint_publication = JanewayBleachField(blank=True, null=True, default=press_text('publication'))
+    preprint_decline = JanewayBleachField(blank=True, null=True, default=press_text('decline'))
 
     random_homepage_preprints = models.BooleanField(default=False)
     homepage_preprints = models.ManyToManyField('submission.Article', blank=True)
@@ -190,7 +223,7 @@ class Press(AbstractSiteModel):
 
         return logic.build_url(
             netloc=self.domain,
-            scheme=self.SCHEMES[self.is_secure],
+            scheme=self._get_scheme(),
             port=port,
             path=_path,
         )
@@ -308,9 +341,33 @@ class Press(AbstractSiteModel):
 
         return True
 
+    @cache(600)
+    def navigation_items(self):
+        return utils.get_navigation_items(self)
+
     @property
     def code(self):
         return 'press'
+
+    @property
+    def public_journals(self):
+        Journal = apps.get_model('journal.Journal')
+        return Journal.objects.filter(
+            hide_from_press=False,
+            is_conference=False,
+        ).order_by('sequence')
+
+    @property
+    def published_articles(self):
+        Article = apps.get_model('submission.Article')
+        return Article.objects.filter(
+            stage=submission_models.STAGE_PUBLISHED,
+            date_published__lte=timezone.now(),
+        )
+
+    def next_group_order(self):
+        orderings = [group.sequence for group in self.editorialgroup_set.all()]
+        return max(orderings) + 1 if orderings else 0
 
     class Meta:
         verbose_name_plural = 'presses'
@@ -327,3 +384,44 @@ class PressSetting(models.Model):
 
     def __str__(self):
         return '{name} - {press}'.format(name=self.name, press=self.press.name)
+
+
+class StaffGroup(models.Model):
+    name = models.CharField(max_length=500)
+    description = models.TextField(blank=True)
+    press = models.ForeignKey(
+        Press,
+        on_delete=models.CASCADE,
+        default=default_press_id,
+    )
+    sequence = models.PositiveIntegerField()
+
+    def members(self):
+        return self.staffgroupmember_set.all()
+
+    class Meta:
+        ordering = ('sequence',)
+
+    def __str__(self):
+        return f'{self.name}, {self.press.name}'
+
+
+class StaffGroupMember(models.Model):
+    group = models.ForeignKey(
+        StaffGroup,
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        'core.Account',
+        on_delete=models.CASCADE,
+    )
+    job_title = models.CharField(max_length=300, blank=True)
+    alternate_title = models.CharField(max_length=300, blank=True)
+    publications = models.TextField(blank=True)
+    sequence = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ('sequence',)
+
+    def __str__(self):
+        return f'{self.user} in {self.group}'

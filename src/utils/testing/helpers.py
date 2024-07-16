@@ -7,7 +7,6 @@ from contextlib import ContextDecorator
 
 from django.utils import translation, timezone
 from django.conf import settings
-from django.utils import timezone
 import datetime
 
 from core import (
@@ -21,10 +20,15 @@ from press import models as press_models
 from submission import models as sm_models
 from review import models as review_models
 from copyediting import models as copyediting_models
+from comms import models as comms_models
+from cms import models as cms_models
+from utils import setting_handler
 from utils.install import update_xsl_files, update_settings, update_issue_types
 from repository import models as repo_models
 from utils.logic import get_aware_datetime
 from uuid import uuid4
+from review.const import ReviewerDecisions as RD
+from cms import models as cms_models
 
 
 def create_user(username, roles=None, journal=None, **attrs):
@@ -52,7 +56,11 @@ def create_user(username, roles=None, journal=None, **attrs):
         except core_models.Role.DoesNotExist:
             create_roles(roles)
             resolved_role = core_models.Role.objects.get(slug=role)
-        core_models.AccountRole(user=user, role=resolved_role, journal=journal).save()
+        core_models.AccountRole.objects.get_or_create(
+            user=user,
+            role=resolved_role,
+            journal=journal
+        )
 
     for attr, value in attrs.items():
         setattr(user, attr, value)
@@ -232,6 +240,7 @@ def create_galley(article, file_obj=None, **kwargs):
     article.galley_set.add(galley)
     return galley
 
+
 def create_section(journal):
 
     section, created = sm_models.Section.objects.get_or_create(
@@ -241,6 +250,7 @@ def create_section(journal):
         plural='Articles'
     )
     return section
+
 
 def create_submission(
     owner=None,
@@ -397,11 +407,18 @@ class request_context(ContextDecorator):
 def create_review_form(journal):
     return review_models.ReviewForm.objects.create(
         name="A Form",
-        slug="A Slug",
         intro="i",
         thanks="t",
         journal=journal
     )
+
+
+def create_round(article, round_number=1):
+    return review_models.ReviewRound.objects.create(
+        article=article,
+        round_number=round_number,
+    )
+
 
 def create_review_assignment(
         journal=None,
@@ -410,6 +427,10 @@ def create_review_assignment(
         editor=None,
         due_date=None,
         review_form=None,
+        decision=None,
+        is_complete=False,
+        review_round=None,
+        review_file=None,
     ):
     if not journal:
         journal, _journal_two = create_journals()
@@ -427,13 +448,23 @@ def create_review_assignment(
         due_date = timezone.now() + datetime.timedelta(days=3)
     if not review_form:
         review_form = create_review_form(journal)
+    if not decision:
+        decision = RD.DECISION_ACCEPT.value
+    if not review_round:
+        review_round = create_round(article)
 
     return review_models.ReviewAssignment.objects.create(
         article=article,
         reviewer=reviewer,
         editor=editor,
         date_due=due_date,
-        form=review_form
+        form=review_form,
+        decision=decision,
+        is_complete=is_complete,
+        date_complete=timezone.now() if is_complete else None,
+        review_round=review_round,
+        access_code=uuid4(),
+        review_file=review_file if review_file else None,
     )
 
 
@@ -525,6 +556,7 @@ def create_copyedit_assignment(article, copyeditor, **kwargs):
     )
     return assignment
 
+
 def create_access_request(journal, user, role, **kwargs):
     role = core_models.Role.objects.get(slug=role)
     access_request, created = core_models.AccessRequest.objects.get_or_create(
@@ -534,3 +566,75 @@ def create_access_request(journal, user, role, **kwargs):
         text='Automatic request as author added to an article.',
     )
     return access_request
+
+
+def create_news_item(content_type, object_id, **kwargs):
+    title = kwargs.get('title', 'Test title')
+    body = kwargs.get('body', 'Test body')
+    posted_by = kwargs.get(
+        'posted_by',
+        create_user(
+            'news_author@example.org',
+            attrs={'first_name': 'News', 'last_name': 'Writer'}
+        )
+    )
+    tags = kwargs.get('tags', ['test tag 1', 'test tag 2'])
+    item = comms_models.NewsItem.objects.create(
+        content_type=content_type,
+        object_id=object_id,
+        title=title,
+        body=body,
+        posted_by=posted_by,
+    )
+    for tag in tags:
+        item.tags.add(comms_models.Tag.objects.create(text=tag))
+    item.save()
+    return item
+
+
+def create_cms_page(content_type, object_id, **kwargs):
+    name = kwargs.get('name', 'test-name')
+    display_name = kwargs.get('display_name', 'Test display name')
+    content = kwargs.get('content', 'Test content')
+    is_markdown = kwargs.get('is_markdown', False)
+
+    return cms_models.Page.objects.create(
+        content_type=content_type,
+        object_id=object_id,
+        name=name,
+        display_name=display_name,
+        content=content,
+        is_markdown=is_markdown,
+    )
+
+
+def create_contact(content_type, object_id, **kwargs):
+    name = kwargs.get('name', 'Test Contact')
+    email = kwargs.get('email', 'contact@example.org')
+    role = kwargs.get('role', 'Test contact role')
+    return core_models.Contacts.objects.create(
+        content_type=content_type,
+        object_id=object_id,
+        name=name,
+        email=email,
+        role=role,
+    )
+
+def create_setting(
+        setting_group_name='test_group',
+        setting_name='test_setting',
+        setting_type='rich-text',
+        pretty_name='Test Setting',
+        description='A test setting.',
+        is_translatable=True,
+        default_value='Default setting value',
+    ):
+    return setting_handler.create_setting(
+        setting_group_name,
+        setting_name,
+        setting_type,
+        pretty_name,
+        description,
+        is_translatable=is_translatable,
+        default_value=default_value,
+    )

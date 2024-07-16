@@ -29,12 +29,18 @@ from core import (
         workflow,
 )
 from core.file_system import JanewayFileSystemStorage
-from core.model_utils import AbstractSiteModel, SVGImageField, AbstractLastModifiedModel
+from core.model_utils import (
+    AbstractSiteModel,
+    SVGImageField,
+    AbstractLastModifiedModel,
+    JanewayBleachField,
+)
 from press import models as press_models
 from submission import models as submission_models
 from utils import setting_handler, logic, install
 from utils.function_cache import cache, mutable_cached_property
 from utils.logger import get_logger
+from review import models as review_models
 
 logger = get_logger(__name__)
 
@@ -75,7 +81,7 @@ def issue_large_image_path(instance, filename):
 
 
 class Journal(AbstractSiteModel):
-    code = models.CharField(max_length=24, unique=True, help_text=gettext(
+    code = models.CharField(max_length=40, unique=True, help_text=gettext(
         'Short acronym for the journal. Used as part of the journal URL'
         'in path mode and to uniquely identify the journal'
     ))
@@ -136,10 +142,24 @@ class Journal(AbstractSiteModel):
         help_text=gettext('The tiny round or square image appearing in browser '
                            'tabs before the webpage title'),
     )
+    default_profile_image = SVGImageField(
+        upload_to=cover_images_upload_path,
+        null=True,
+        blank=True,
+        storage=fs,
+        help_text=gettext('A default image displayed on the profile and '
+                          'editorial team pages when the user has no set '
+                          'profile image.'),
+    )
     # DEPRECATED "description" in favour of "journal_description" setting
-    description = models.TextField(null=True, blank=True, verbose_name="Journal Description")
-    contact_info = models.TextField(null=True, blank=True, verbose_name="Contact Information")
-    keywords = models.ManyToManyField("submission.Keyword", blank=True, null=True)
+    description = JanewayBleachField(null=True, blank=True, verbose_name="Journal Description")
+    contact_info = JanewayBleachField(null=True, blank=True, verbose_name="Contact Information")
+    keywords = models.ManyToManyField(
+        "submission.Keyword",
+        blank=True,
+        null=True,
+        verbose_name="Discipline",
+    )
 
     disable_metrics_display = models.BooleanField(default=False)
     disable_article_images = models.BooleanField(
@@ -222,6 +242,11 @@ class Journal(AbstractSiteModel):
     )
     display_article_page_numbers = models.BooleanField(default=True)
     display_issue_doi = models.BooleanField(default=True)
+    display_issues_grouped_by_decade = models.BooleanField(
+        default=False,
+        help_text='When enabled the issue page will group and display issues '
+                  'by decade.',
+    )
 
     disable_front_end = models.BooleanField(default=False)
 
@@ -335,7 +360,7 @@ class Journal(AbstractSiteModel):
                 path = path[len(site_path):]
             return logic.build_url(
                     netloc=self.domain,
-                    scheme=self.SCHEMES[self.is_secure],
+                    scheme=self._get_scheme(),
                     port=None,
                     path=path,
             )
@@ -367,6 +392,33 @@ class Journal(AbstractSiteModel):
             journal=self,
             date__lte=timezone.now(),
         )
+
+    def issues_by_decade(self, issues_to_sort=None):
+        issue_decade_dict = {}
+
+        if not issues_to_sort:
+            issues_to_sort = Issue.objects.filter(
+                journal=self,
+                date__lte=timezone.now(),
+                issue_type__code='issue',
+            )
+        for issue in issues_to_sort:
+            issue_year = issue.date_published.year
+            decade_start = issue_year - (issue_year % 10)
+            decade_end = decade_start + 9
+
+            # if the decade is greater than the current year, cap at the
+            # current year.
+            date = timezone.now().date()
+            if decade_end > date.year:
+                decade_end = date.year
+
+            decade_span = f"{decade_start} - {decade_end}"
+            if issue_decade_dict.get(decade_span):
+                issue_decade_dict[decade_span].append(issue)
+            else:
+                issue_decade_dict[decade_span] = [issue]
+        return issue_decade_dict
 
     def editors(self):
         """ Returns all users enrolled as editors for the journal
@@ -511,6 +563,28 @@ class Journal(AbstractSiteModel):
                 setting_name='journal_description',
             )
 
+    def setup_default_review_form(self):
+        default_review_form, c = review_models.ReviewForm.objects.get_or_create(
+            journal=self,
+            name='Default Form',
+            defaults={
+                'intro': 'Please complete the form below.',
+                'thanks': 'Thank you for completing the review.',
+            }
+        )
+
+        if c:
+            main_element = review_models.ReviewFormElement.objects.create(
+                name='Review',
+                kind='textarea',
+                required=True,
+                order=1,
+                width='large-12 columns',
+                help_text=gettext('Please add as much detail as you can.'),
+            )
+
+            default_review_form.elements.add(main_element)
+
 
 class PinnedArticle(models.Model):
     journal = models.ForeignKey(
@@ -556,7 +630,7 @@ class Issue(AbstractLastModifiedModel):
         "journal.IssueType", blank=False, null=True, on_delete=models.SET_NULL)
     # To be deprecated in 1.3.7
     old_issue_type = models.CharField(max_length=200, default='Issue', choices=ISSUE_TYPES, null=True, blank=True)
-    issue_description = models.TextField(blank=True, null=True)
+    issue_description = JanewayBleachField(blank=True, null=True)
     short_description = models.CharField(max_length=600, blank=True, null=True)
 
     cover_image = SVGImageField(
@@ -696,7 +770,6 @@ class Issue(AbstractLastModifiedModel):
         if journal.display_issue_volume and self.volume:
             volume = "{%% trans 'Volume' %%} %s" % self.volume
         if journal.display_issue_number and self.issue and self.issue != "0":
-            issue = gettext("Issue") + " {}".format(self.issue)
             issue = "{%% trans 'Issue' %%} %s" % self.issue
         if journal.display_issue_year and self.date:
             year = "{}".format(self.date.year)
@@ -745,7 +818,7 @@ class Issue(AbstractLastModifiedModel):
             ordered_articles = ArticleOrdering.objects.filter(issue=self, section=ordered_section.section)
 
             for article in ordered_articles:
-                article_list.append(article)
+                article_list.append(article.article)
 
             articles = self.articles.filter(section=ordered_section.section, pk__in=article_pks)
 
@@ -975,8 +1048,16 @@ class Issue(AbstractLastModifiedModel):
                 article_ordering.save()
 
     def save(self, *args, **kwargs):
-        # set save as False to avoid infinite recursion
-        self.update_display_title(save=False)
+        # get the currently enabled languages for this journal or the default
+        journal_languages = self.journal.get_setting(
+            'general',
+            'journal_languages',
+        ) or [settings.LANGUAGE_CODE]
+
+        for lang in journal_languages:
+            with translation.override(lang):
+                # set save as False to avoid infinite recursion
+                self.update_display_title(save=False)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -1131,7 +1212,7 @@ class FixedPubCheckItems(models.Model):
     verify_doi = models.BooleanField(default=False)
     select_issue = models.BooleanField(default=False)
     set_pub_date = models.BooleanField(default=False)
-    notify_the_author = models.BooleanField(default=False)
+    send_notifications = models.BooleanField(default=False)
     select_render_galley = models.BooleanField(default=False)
     select_article_image = models.BooleanField(default=False)
     select_open_reviews = models.BooleanField(default=False)
@@ -1147,7 +1228,7 @@ class PresetPublicationCheckItem(models.Model):
     )
 
     title = models.TextField()
-    text = models.TextField()
+    text = JanewayBleachField()
     enabled = models.BooleanField(default=True)
 
 
@@ -1167,7 +1248,7 @@ class PrePublicationChecklistItem(models.Model):
     completed_on = models.DateTimeField(blank=True, null=True)
 
     title = models.TextField()
-    text = models.TextField()
+    text = JanewayBleachField()
 
     def __str__(self):
         return "{0} - {1}".format(self.pk, self.title)
@@ -1254,38 +1335,26 @@ def setup_submission_items(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Journal)
 def setup_default_form(sender, instance, created, **kwargs):
-    if created:
-        from review import models as review_models
+    # if this is a new journal and there is not default review for already
+    # create a new one with a default review element.
+    if created and not review_models.ReviewForm.objects.filter(
+            journal=instance,
+    ).exists():
+        instance.setup_default_review_form()
 
-        if not review_models.ReviewForm.objects.filter(
-                slug='default-form',
-                journal=instance,
-        ).exists():
-
-            default_review_form = review_models.ReviewForm.objects.create(
-                journal=instance,
-                name='Default Form',
-                slug='default-form',
-                intro='Please complete the form below.',
-                thanks='Thank you for completing the review.'
-            )
-
-            main_element = review_models.ReviewFormElement.objects.create(
-                name='Review',
-                kind='textarea',
-                required=True,
-                order=1,
-                width='large-12 columns',
-                help_text=gettext('Please add as much detail as you can.'),
-            )
-
-            default_review_form.elements.add(main_element)
 
 
 @receiver(post_save, sender=Journal)
 def update_issue_display_title(sender, instance, created, **kwargs):
     for issue in Issue.objects.filter(journal=instance):
         issue.save()
+
+
+@receiver(post_save, sender=Journal)
+def setup_journal_file_directory(sender, instance, created, **kwargs):
+    if created:
+        instance.setup_directory()
+
 
 def issue_articles_change(sender, **kwargs):
     """

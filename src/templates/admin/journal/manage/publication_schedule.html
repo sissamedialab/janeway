@@ -9,7 +9,8 @@
 {% block title-sub %}Lists articles that are marked as published but with dates set in the future.{% endblock %}
 
 {% block breadcrumbs %}
-{{ block.super }}
+    {{ block.super }}
+    <li> Publication Schedule </li>
 {% endblock breadcrumbs %}
 
 
@@ -33,7 +34,7 @@
                         <tbody>
                             {% for article in articles %}
                                 <tr>
-                                    <td><a href="{% url 'manage_archive_article' article.pk %}">{{ article.title|safe }}</a></td>
+                                    <td><a href="{% url 'manage_archive_article' article.pk %}">{{ article.safe_title }}</a></td>
                                     <td>{{ article.section.name }}</td>
                                     <td><a href="{% url 'edit_identifiers' article.pk %}" target="_blank">{{ article.get_doi }}</a></td>
                                     <td>{{ article.date_published|date:"Y-m-d H:i" }}</td>

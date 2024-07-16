@@ -33,8 +33,12 @@ class Command(BaseCommand):
         :param options: None
         :return: None
         """
+        if not os.path.isfile('/usr/bin/crontab'):
+            print("WARNING: /usr/bin/crontab not found, skipping crontab config.")
+            return
+
         if not crontab:
-            print("crontab not is not installed")
+            print("WARNING: crontab module is not installed, skipping crontab config.")
             return
 
         action = options.get('action')
@@ -77,6 +81,17 @@ class Command(BaseCommand):
                     'time': 59,
                     'task': 'check_mailgun_stat',
                     'type': 'mins',
+                }
+            )
+
+        if settings.SITE_SEARCH_INDEXING_FREQUENCY:
+            task_time, task_type = settings.SITE_SEARCH_INDEXING_FREQUENCY
+            jobs.append(
+                {
+                    'name': '{}_site_search_data'.format(cwd),
+                    'time': task_time,
+                    'task': 'generate_site_search_data',
+                    'type': task_type,
                 }
             )
 

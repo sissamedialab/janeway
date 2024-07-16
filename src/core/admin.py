@@ -39,20 +39,22 @@ class SettingAdmin(admin.ModelAdmin):
 
 class AccountAdmin(UserAdmin):
     """Displays Account objects in the Django admin interface."""
-    list_display = ('email', 'orcid', 'first_name', 'middle_name',
+    list_display = ('id', 'email', 'orcid', 'first_name', 'middle_name',
                     'last_name', 'institution', '_roles_in', 'last_login')
+    list_display_links = ('id', 'email')
     list_filter = ('accountrole__journal',
                    'repositoryrole__repository__short_name',
                    'is_active', 'is_staff', 'is_admin', 'is_superuser',
                    'last_login')
-    search_fields = ('username', 'email', 'first_name', 'middle_name',
+    search_fields = ('id', 'username', 'email', 'first_name', 'middle_name',
                      'last_name', 'orcid', 'institution',
                      'biography', 'signature')
 
     fieldsets = UserAdmin.fieldsets + (
         (None, {'fields': (
-            'middle_name', 'orcid', 'institution', 'department', 'twitter',
-            'linkedin', 'facebook', 'github', 'biography',
+            'name_prefix', 'middle_name', 'orcid',
+            'institution', 'department', 'country', 'twitter',
+            'linkedin', 'facebook', 'github', 'website', 'biography', 'enable_public_profile',
             'signature', 'profile_image', 'interest', "preferred_timezone",
         )}),
     )
@@ -72,6 +74,7 @@ class AccountAdmin(UserAdmin):
         admin_utils.AccountRoleInline,
         admin_utils.RepositoryRoleInline,
         admin_utils.EditorialGroupMemberInline,
+        admin_utils.StaffGroupMemberInline,
         admin_utils.PasswordResetInline,
     ]
 
@@ -109,9 +112,17 @@ class PasswordResetAdmin(admin.ModelAdmin):
 
 class SettingValueAdmin(admin.ModelAdmin):
     list_display = ('_setting_name', 'value', 'journal')
-    list_filter = ('journal', )
-    search_fields = ('setting__name', 'setting__pretty_name',
-                     'setting__group__name', 'value')
+    list_filter = (
+        'journal',
+        'setting__types',
+    )
+    search_fields = (
+        'setting__name',
+        'setting__pretty_name',
+        'setting__group__name',
+        'setting__types',
+        'value',
+    )
     raw_id_fields = (
         'setting', 'journal',
     )
@@ -151,8 +162,7 @@ class FileAdmin(admin.ModelAdmin):
     search_fields = ('original_filename', 'article_id', 'label',
                      'description', 'owner__email', 'owner__first_name',
                      'owner__last_name')
-    raw_id_fields = ('owner',)
-    filter_horizontal = ('history',)
+    raw_id_fields = ('owner', 'history')
     readonly_fields = ['article_id']
 
     def article_pk(self, obj):
@@ -326,9 +336,10 @@ class GalleyAdmin(admin.ModelAdmin):
 
 
 class EditorialGroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'journal', 'sequence')
-    list_filter = ('journal',)
-    search_fields = ('name', 'journal__code')
+    list_display = ('name', 'journal', 'press', 'sequence',
+                    'display_profile_images')
+    list_filter = ('journal', 'press')
+    search_fields = ('name',)
 
     inlines = [
         admin_utils.EditorialGroupMemberInline
@@ -340,8 +351,7 @@ class EditorialMemberAdmin(admin.ModelAdmin):
     list_filter = ('group__journal', 'group')
     raw_id_fields = ('user', )
     search_fields = ('pk', 'user__first_name', 'user__last_name',
-                     'user__email', 'group__name', 'group__description',
-                     'group__journal__code')
+                     'user__email', 'group__name', 'group__description')
 
     def _journal(self, obj):
         return obj.group.journal if obj else ''

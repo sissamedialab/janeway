@@ -4,12 +4,12 @@
 
 {% block title %}Request Revisions{% endblock title %}
 {% block title-section %}Request Revisions{% endblock %}
-{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.title }}{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
 {{ block.super }}
-{% include "elements/breadcrumbs/review_base.html" %}
-<li>Request Revisions</li>
+    {% include "elements/breadcrumbs/review_base.html" with subpage="yes" %}
+    <li>Request Revisions</li>
 {% endblock breadcrumbs %}
 
 {% block body %}
@@ -50,6 +50,5 @@
 {% endblock body %}
 
 {% block js %}
-{% include "elements/datepicker.html" with target="#id_date_due" %}
 {% include "elements/jqte.html" %}
 {% endblock js %}

@@ -125,6 +125,7 @@
                     <i class="fa fa-plug">&nbsp;</i> Plugins
                 </a>
             </li>
+            {% hook 'journal_editor_nav_block' %}
         {% endif %}
         {% if request.user.is_staff %}
             <li>
@@ -133,10 +134,10 @@
                 </a>
             </li>
             {% hook 'journal_admin_nav_block' %}
-            <li class="subtitle">
-                <a href="#">Version: {{ version }}</a>
-            </li>
         {% endif %}
+        <li class="subtitle">
+            <a href="#">Version: {{ version }}</a>
+        </li>
     </ul>
 </div>
 

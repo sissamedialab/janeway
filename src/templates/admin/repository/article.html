@@ -1,5 +1,5 @@
 {% extends "admin/core/base.html" %}
-{% load i18n %}c
+{% load i18n %}
 {% load static %}
 
 {% block title %}{{ preprint.title|striptags }} - Manager{% endblock %}
@@ -57,7 +57,7 @@
                     </tr>
                     <tr>
                         <td colspan="3">
-                            {% include "repository/elements/subject_display.html" %}
+                            {% include "common/repository/subject_display.html" %}
                         </td>
                     </tr>
                     <tr>
@@ -419,4 +419,3 @@
     </script>
     <script src="{% static "common/js/confirm.js" %}"></script>
 {% endblock %}
-

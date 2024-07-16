@@ -13,7 +13,11 @@ from utils.testing import helpers
 from utils.install import update_settings
 from core import models as cm
 from repository import models as rm, install
+from freezegun import freeze_time
 
+from dateutil import tz
+
+FROZEN_DATETIME = timezone.datetime(2024, 3, 25, 10, 0, tzinfo=tz.gettz("America/Chicago"))
 
 class TestModels(TestCase):
     def setUp(self):
@@ -50,6 +54,10 @@ class TestModels(TestCase):
             self.preprint_author,
             self.subject,
             title='Preprint Number One',
+        )
+        self.recommendation, _ = rm.ReviewRecommendation.objects.get_or_create(
+            repository=self.repository,
+            name='Accept',
         )
         self.server_name = "repo.test.com"
         update_settings()
@@ -121,6 +129,7 @@ class TestModels(TestCase):
         data = {
             'body': 'This is my review.',
             'anonymous': True,
+            'recommendation': self.recommendation.pk,
         }
         path = reverse(
             'repository_submit_review',
@@ -236,7 +245,8 @@ class TestModels(TestCase):
             manager=self.repo_manager,
             date_due=timezone.now(),
             status='complete',
-            comment=comment
+            comment=comment,
+            recommendation=self.recommendation,
         )
         path = reverse(
             'repository_edit_review_comment',
@@ -251,6 +261,7 @@ class TestModels(TestCase):
             data={
                 'body': 'This is my slightly different review.',
                 'anonymous': False,
+                'recommendation': self.recommendation.pk,
             },
             SERVER_NAME=self.server_name,
         )
@@ -262,3 +273,45 @@ class TestModels(TestCase):
             comment.body,
             'This is my slightly different review.',
         )
+
+    @override_settings(URL_CONFIG='domain')
+    @freeze_time(FROZEN_DATETIME)
+    def test_accept_preprint(self):
+        self.preprint_one.make_new_version(self.preprint_one.submission_file)
+        path = reverse('repository_manager_article',
+                       kwargs={'preprint_id': self.preprint_one.pk,})
+        self.client.force_login(self.repo_manager)
+        self.client.post(path,
+                        data={
+                            'accept': '',
+                            'datetime': "2024-03-25 10:00",
+                            'timezone': "America/Chicago"
+                        },
+                        SERVER_NAME=self.server_name,)
+        preprint = rm.Preprint.objects.get(pk=self.preprint_one.pk)
+        self.assertEqual(
+            preprint.date_published.timestamp(),
+            FROZEN_DATETIME.timestamp(),
+        )
+        self.assertEqual(
+            preprint.date_accepted.timestamp(),
+            FROZEN_DATETIME.timestamp(),
+        )
+
+    @override_settings(URL_CONFIG='domain')
+    @freeze_time(FROZEN_DATETIME, tz_offset=5)
+    def test_accept_preprint_bad_date(self):
+        self.preprint_one.make_new_version(self.preprint_one.submission_file)
+        path = reverse('repository_manager_article',
+                       kwargs={'preprint_id': self.preprint_one.pk,})
+        self.client.force_login(self.repo_manager)
+        self.client.post(path,
+                        data={
+                            'accept': '',
+                            'datetime': "2024-35-35 10:00",
+                            'timezone': "America/Chicago"
+                        },
+                        SERVER_NAME=self.server_name,)
+        p = rm.Preprint.objects.get(pk=self.preprint_one.pk)
+        self.assertIsNone(p.date_published)
+        self.assertIsNone(p.date_accepted)

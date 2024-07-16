@@ -23,6 +23,10 @@ class Events:
     # raised when an article is submitted
     ON_ARTICLE_SUBMITTED = 'on_article_submitted'
 
+    # kwargs: editor_assignment, request, email_data, acknowledgement (true), skip (boolean)
+    # raised when an editor is manually assigned to an article(or skip the acknowledgement)
+    ON_EDITOR_MANUALLY_ASSIGNED = 'on_editor_manually_assigned'
+
     # kwargs: request, editor_assignment, user_message_content (will be blank), acknowledgement (false)
     # raised when an editor is assigned to an article
     ON_ARTICLE_ASSIGNED = 'on_article_assigned'
@@ -36,6 +40,9 @@ class Events:
     # kwargs: review_assignment, request, user_message_content (will be blank), acknowledgement (false)
     # raised when a review is requested
     ON_REVIEWER_REQUESTED = 'on_reviewer_requested'
+    # kwargs: review_assignment, request, email_data, acknowledgement (true), skip (boolean)
+    # raised when an editor decides to notify the reviewer with a custom message or skipped the email
+    ON_REVIEWER_REQUESTED_NOTIFICATION = 'on_reviewer_requested_notification'
     # kwargs: review_assignment, request, user_message_content, acknowledgement (true), skip (boolean)
     # raised when an editor decides to notify the reviewer of the request (or skip the acknowledgement)
     ON_REVIEWER_REQUESTED_ACKNOWLEDGE = 'on_reviewer_requested_acknowledge'
@@ -223,6 +230,11 @@ class Events:
     # raised when an Editor notifies an author that publication is set
     ON_AUTHOR_PUBLICATION = 'on_author_publication'
 
+    # kwargs: request, article, notification_formset
+    # raised when an editor notifies author, editors,
+    # and/or reviewers that publication is set
+    ON_PREPUB_NOTIFICATIONS = 'on_prepub_notifications'
+
     # kwargs: request, override
     # raised when an Editor overrides review security
     ON_REVIEW_SECURITY_OVERRIDE = 'on_review_security_override'
@@ -271,6 +283,10 @@ class Events:
     # raised when a user access request is evaluated by staff.
     ON_ACCESS_REQUEST_COMPLETE = 'on_access_request_complete'
 
+    DEPRECATED_EVENTS = {
+        ON_AUTHOR_PUBLICATION,
+    }
+
     @staticmethod
     def raise_event(event_name, task_object=None, **kwargs):
         """
@@ -281,6 +297,9 @@ class Events:
         :param kwargs: the arguments to pass to the event
         :return: None
         """
+        if event_name in Events.DEPRECATED_EVENTS and settings.DEBUG:
+            raise DeprecationWarning(f'{ event_name } is deprecated.')
+
         if settings.DEBUG:
             print('Firing event {}'.format(event_name))
         # destroy/complete tasks that have registered for this event

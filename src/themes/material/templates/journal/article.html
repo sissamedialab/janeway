@@ -10,15 +10,16 @@
     {{ journal_settings.general.journal_name | striptags }} {% endblock %}
 
 {% block head %}
+    <link href="{% static "common/lightbox/css/lightbox.css" %}" rel="stylesheet" />
     {% include "elements/article_meta_tags.html" %}
 {% endblock %}
 
 {% block body %}
-    <div class="row">
+    <div id="article_opener" class="row">
         <div class="col m12">
             <div class="card">
             {% if not journal_settings.article.disable_article_large_image %}
-                <div class="card-image article-card waves-effect waves-block waves-light">
+                <div class="card-image article-card">
                         <img class="orbit-image"
                             {% if article.large_image_file.id %}
                              src="{% url 'article_file_download' 'id' article.id article.large_image_file.id %}"
@@ -85,13 +86,16 @@
                             <div class="divider"></div>
                         </div>
                     {% endif %}
-                    {% if article.is_published and not journal_settings.article.suppress_how_to_cite %}
+                    {% if article.is_published or proofing %}
+                    {% if not journal_settings.article.suppress_how_to_cite %}
                         <h2>{% trans "How to Cite" %}</h2>
-                        {{ article.how_to_cite | safe }}
-
+                        <div id="article_how_to_cite">
+                            {{ article.how_to_cite | safe }}
+                        </div>
                         <div class="spacer">
                             <div class="divider"></div>
                         </div>
+                    {% endif %}
                     {% endif %}
                     {% if article.rights %}
                         <h2>{% trans "Rights" %}</h2>
@@ -114,7 +118,8 @@
                         </div>
                     {% endif %}
 
-                    {% if article.is_published and galleys %}
+                    {% if article.is_published or proofing %}
+                    {% if galleys %}
                         <div class="show-on-small hide-on-med-and-up">
                             <h2>{% trans "Download" %}</h2>
                             <p>
@@ -128,88 +133,99 @@
                                     {% endif %}
                                 {% endfor %}
                             </p>
+                            {% if proofing %}
+                                <p id="note_to_proofreader_1">
+                                    <i class="material-icons left">info</i>
+                                    Note to proofreader: Download links on this page begin to work when the article is published.
+                                </p>
+                            {% endif %}
                             <div class="spacer">
                                 <div class="divider"></div>
                             </div>
                         </div>
                     {% endif %}
+                    {% endif %}
 
                     {% if article.funders.all %}
                         <div class="callout primary">
                             <h2>{% trans "Funding" %}</h2>
-                            <ul>
-                                {% for funder in article.funders.all %}
-                                    <li>
-                                        {% if funder.fundref_id %}
-                                            <a href="{% url "funder_articles" funder.fundref_id %}">{{ funder.name }}</a>
-                                        {% else %}
-                                            {{ funder.name }}
-                                        {% endif %}
-                                        {% if funder.funding_id %}
-                                            {% blocktranslate with id=funder.funding_id %}
-                                                (grant {{ id }})
-                                            {% endblocktranslate %}
-                                        {% endif %}
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                            {% for funder in article.funders.all %}
+                                <p>
+                                    {% if funder.fundref_id %}
+                                        <a href="{% url "funder_articles" funder.fundref_id %}">{{ funder.name }}</a>
+                                    {% else %}
+                                        {{ funder.name }}
+                                    {% endif %}
+                                    {% if funder.funding_id %}
+                                        {% blocktranslate with id=funder.funding_id %}
+                                            ({{ id }})
+                                        {% endblocktranslate %}
+                                    {% endif %}
+                                    {% if funder.funding_statement %}
+                                        <br/>
+                                        {{ funder.funding_statement|safe|linebreaksbr }}
+                                    {% endif %}
+                                </p>
+                            {% endfor %}
                         </div>
                     {% endif %}
                 </div>
             </div>
             <div class="row">
-                {% if article.metrics and article.is_published and not request.journal.disable_metrics_display %}
+                {% if article.is_published or proofing %}
+                {% if article.metrics and not request.journal.disable_metrics_display %}
                     <div class="col m12 l12 s12">
                         <div class="card">
                             <div class="card-content center">
                                 <div class="alm">
-                                    <h5>
+                                    <p class="alm_numbers">
                                         {{ article.metrics.views }}
-                                    </h5>
-                                    <p><i class="fa fa-eye"></i>{% trans "Views" %}</p>
+                                    </p>
+                                    <p><i class="fa fa-eye"></i> {% trans "Views" %}</p>
                                 </div>
                                 <div class="alm">
-                                    <h5>
+                                    <p class="alm_numbers">
                                         {{ article.metrics.downloads }}
-                                    </h5>
-                                    <p><i class="fa fa-download"></i>{% trans "Downloads" %}</p>
+                                    </p>
+                                    <p><i class="fa fa-download"></i> {% trans "Downloads" %}</p>
                                 </div>
                                 {% if article.metrics.alm.twitter %}
                                     <div class="alm">
-                                        <h5>
+                                        <p class="alm_numbers">
                                             {{ article.metrics.alm.twitter }}
-                                        </h5>
-                                        <p><i class="fa fa-twitter"></i>{% trans "Tweets" %}</p>
+                                        </p>
+                                        <p><i class="fa fa-twitter"></i> {% trans "Tweets" %}</p>
                                     </div>
                                 {% endif %}
                                 {% if article.metrics.alm.wikipedia %}
                                     <div class="alm">
-                                        <h5>
+                                        <p class="alm_numbers">
                                             {{ article.metrics.alm.wikipedia }}
-                                        </h5>
-                                        <p><i class="fa fa-wikipedia-w"></i>{% trans "Wikipedia" %}</p>
+                                        </p>
+                                        <p><i class="fa fa-wikipedia-w"></i> {% trans "Wikipedia" %}</p>
                                     </div>
                                 {% endif %}
                                 {% if article.metrics.alm.reddit %}
                                     <div class="alm">
-                                        <h5>
+                                        <p class="alm_numbers">
                                             {{ article.metrics.alm.reddit }}
-                                        </h5>
-                                        <p><i class="fa fa-reddit"></i>{% trans "Reddit" %}</p>
+                                        </p>
+                                        <p><i class="fa fa-reddit"></i> {% trans "Reddit" %}</p>
                                     </div>
                                 {% endif %}
 
                                 {% if article.citation_count and not journal_settings.article.suppress_citations_metric %}
                                     <div class="alm">
-                                        <h5>
+                                        <p class="alm_numbers">
                                             {{ article.citation_count }}
-                                        </h5>
-                                        <p><i class="fa fa-quote-left"></i>{% trans "Citations" %}</p>
+                                        </p>
+                                        <p><i class="fa fa-quote-left"></i> {% trans "Citations" %}</p>
                                     </div>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
+                {% endif %}
                 {% endif %}
             </div>
             {% if article_content %}
@@ -218,7 +234,9 @@
                         <div class="card">
                             <div class="card-content">
                                 {{ article_content|safe }}
+                                <div id="article_footer_block">
                                 {% hook 'article_footer_block' %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -271,7 +289,8 @@
                     <div class="spacer">
                         <div class="divider"></div>
                     </div>
-                    {% if article.is_published and galleys %}
+                    {% if article.is_published or proofing %}
+                    {% if galleys %}
                         <h4>
                             {% trans "Download" %}
                         </h4>
@@ -288,10 +307,16 @@
                                 </li>
                             {% endfor %}
                         </ul>
-
+                        {% if proofing %}
+                            <p id="note_to_proofreader_2">
+                                <i class="material-icons left">info</i>
+                                Note to proofreader: Download links on this page begin to work when the article is published.
+                            </p>
+                        {% endif %}
                         <div class="spacer">
                             <div class="divider"></div>
                         </div>
+                    {% endif %}
                     {% endif %}
 
                     {% include "elements/journal/article_issue_list.html" %}
@@ -332,6 +357,26 @@
                                 <td>{{ article.ISSN_override}}</td>
                             </tr>
                             {% endif %}
+                            {% if journal_settings.article.display_date_submitted and article.date_submitted %}
+                                <tr>
+                                    <th>{% trans "Submitted on" %}</th>
+                                    <td>{{ article.date_submitted|date:"Y-m-d" }}</td>
+                                </tr>
+                            {% endif %}
+                            {% if journal_settings.article.display_date_accepted and article.date_accepted %}
+                                <tr>
+                                    <th>{% trans "Accepted on" %}</th>
+                                    <td>{{ article.date_accepted|date:"Y-m-d" }}</td>
+                                </tr>
+                            {% endif %}
+                            {% if article.date_published or proofing %}
+                            <tr>
+                                <th>{% trans "Published on" %}</th>
+                                <td id="article_date_published">
+                                    {{ article.date_published|date:"Y-m-d" }}
+                                </td>
+                            </tr>
+                            {% endif %}
                         </table>
                     </div>
                     <div class="spacer">
@@ -360,30 +405,6 @@
                             <div class="divider"></div>
                         </div>
                     {% endif %}
-
-                    {% if article.date_accepted or article.date_published %}
-                    <h4>
-                        {% trans "Dates" %}
-                    </h4>
-                    <table class="sidebar-table">
-                        {% if article.date_accepted %}
-                            <tr>
-                                <th>{% trans "Accepted" %}</th>
-                                <td>{{ article.date_accepted|date:"Y-m-d" }}</td>
-                            </tr>
-                        {% endif %}
-                        {% if article.date_published %}
-                        <tr>
-                            <th>{% trans "Published" %}</th>
-                            <td>{{ article.date_published|date:"Y-m-d" }}</td>
-                        </tr>
-                        {% endif %}
-                    </table>
-                    <div class="spacer">
-                        <div class="divider"></div>
-                    </div>
-                    {% endif %}
-
                     <h4>
                         {% trans "Licence" %}
                     </h4>
@@ -448,7 +469,7 @@
                         </div>
                     {% endif %}
 
-                    {% if article.is_published %}
+                    {% if article.is_published or proofing %}
                         <h4>
                             {% trans "File Checksums" %} (MD5)
                         </h4>
@@ -517,5 +538,6 @@
         child.append('<br /><small><a href="#table-' + $(this).attr('id') + '" class="modal-trigger">View Larger Table</a></small>');
     });
     </script>
-
+    <script src="{% static "common/lightbox/js/lightbox.js" %}"></script>
+    <script type='text/javascript' src='https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js'></script>
 {% endblock %}

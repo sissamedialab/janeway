@@ -4,11 +4,11 @@
 
 {% block title %}Add Copyeditor{% endblock %}
 {% block title-section %}Add Copyeditor{% endblock %}
-{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.title }}{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
-    {% include "elements/breadcrumbs/copyediting_base.html" %}
+    {% include "elements/breadcrumbs/copyediting_base.html" with subpage="yes" %}
     <li>Add Copyedit Assignment</li>
 {% endblock breadcrumbs %}
 
@@ -122,7 +122,6 @@
         {% include "admin/elements/open_modal.html" with target=form.modal.id %}
     {% endif %}
     {% include "elements/datatables.html" with target="#copyeditor" sort=2 order='asc' %}
-    {% include "elements/datepicker.html" with target="#id_due" %}
     {% include "elements/jqte.html" %}
     <script src="{% static "admin/js/csrf.js" %}"></script>
     <script src="{% static "common/js/accountrole.js" %}"></script>
