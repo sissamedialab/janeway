@@ -12,7 +12,7 @@ class EditorialDecisions(EnumContains):
     MAJOR_REVISIONS = 'major_revisions'
     TECHNICAL_REVISIONS = "tech_revisions"
     REVIEW = 'review'
-    UNDER_APPEAL = 'under_appeal'
+    OPEN_APPEAL = 'open_appeal'
 
 
 class ReviewerDecisions(EnumContains):

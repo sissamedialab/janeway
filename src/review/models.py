@@ -538,7 +538,7 @@ def revision_type():
         (ED.MINOR_REVISIONS.value, 'Minor Revisions'),
         (ED.MAJOR_REVISIONS.value, 'Major Revisions'),
         (ED.TECHNICAL_REVISIONS.value, 'Technical Revisions'),
-        (ED.UNDER_APPEAL.value, 'Under Appeal'),
+        (ED.OPEN_APPEAL.value, 'Open Appeal'),
     )
 
 
