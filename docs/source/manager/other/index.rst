@@ -28,6 +28,14 @@ Janeway lets you define your own email reminders for overdue Reviews and Revisio
     - The name of the template that should be used when sending the reminder. If this template does no exist you will be asked to create it.
 - Subject
     - The email subject to send with the reminder.
+
+There are three types of reminder email supported by Janeway:
+
+- Review (Invited) - sent when a reviewer has been invited but not accepted a review request.
+- Review (Accepted) - sent when a reviewer has accepted a review request but not yet completed it.
+- Revision - Sent to authors with active revision requests.
+
+Review reminders, both invited and accepted, are sent based on the review assignment due date set by the editor. Revision reminders are sent based on the revision request due date set by the editor. You can set reminders to be sent either before or after the set due date.
     
 A reminder email has access to three objects in the template:
 
@@ -39,6 +47,7 @@ On the edit template page there is a small guide showing some of the variables y
 
 
 .. figure:: ../../nstatic/create_reminders.gif
+    :alt: A GIF showing the reating, editing and deleting a reminder, showing the various screens and fields.
 
     Creating, editing and deleting a reminder.
 
@@ -63,6 +72,8 @@ When editing a template you will see the default version of the email at the top
     When editing an email that has a URL placeholder (like {{ review_url }} ) it is important that you do not add anything immediately after this placeholder as email clients may interpret them as part of the link.
 
 .. figure:: ../../nstatic/edit_template.png
+    :alt: The review assignment email template screen, showing the default value with the customisation textbox below it.
+    :class: Screenshot
 
     Editing an email template.
 
@@ -71,12 +82,16 @@ Publication Notifications (Readers)
 Janeway (as of version 1.4.4) supports publication notifications via a new role called "reader". This feature can be toggled on or off for any given journal. Once the setting is toggled on anyone with an account can sign up to receive emails when new articles are published via their profile page. This feature has been designed with continuous publication in mind but will also work well for those who publish full issues.
 
 .. figure:: ../../nstatic/publication-notifications.png
+    :alt: Publication Notification page, showing the Readers section on the left and Sent Notifications section on the right.
+    :class: Screenshot
 
     Viewing readers and notifications in Manager.
 
 Journal staff can toggle the feature on by visiting Manager > Publication Notification (Readers) and using the link displayed on that page (see figure above).
 
 .. figure:: ../../nstatic/register-for-reader-notifications.png
+    :alt: Example of the subscribe to article noticification button.
+    :class: Screenshot
 
     Registering for reader notifications.
 

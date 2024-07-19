@@ -2,11 +2,11 @@
 
 {% block title %}Permission Denied{% endblock title %}
 {% block admin-header %}Permission Denied{% endblock %}
-{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.title }}{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
-    {% include "elements/breadcrumbs/review_base.html" %}
+    {% include "elements/breadcrumbs/review_base.html" with subpage="yes" %}
     <li>Review Warning</li>
 {% endblock breadcrumbs %}
 

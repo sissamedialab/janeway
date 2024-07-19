@@ -13,6 +13,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 
 from core import files, models as core_models
 from repository import models as preprint_models
@@ -86,6 +87,7 @@ def submit_submissions(request):
     # gets a list of submissions for the logged in user
     articles = models.Article.objects.filter(
         owner=request.user,
+        journal=request.journal,
     ).exclude(
         stage=models.STAGE_UNSUBMITTED,
     )
@@ -111,18 +113,14 @@ def submit_funding(request, article_id):
     :param article_id: Article PK
     :return: HttpResponse or HttpRedirect
     """
-    article = get_object_or_404(models.Article, pk=article_id)
-    additional_fields = models.Field.objects.filter(journal=request.journal)
-    submission_summary = setting_handler.get_setting(
-        'general',
-        'submission_summary',
-        request.journal,
-    ).processed_value
-    form = forms.ArticleInfoSubmit(
-        instance=article,
-        additional_fields=additional_fields,
-        submission_summary=submission_summary,
+    article = get_object_or_404(
+        models.Article,
+        pk=article_id,
         journal=request.journal,
+    )
+    additional_fields = models.Field.objects.filter(journal=request.journal)
+    funder_form = forms.ArticleFundingForm(
+        article=article,
     )
 
     if request.POST:
@@ -131,24 +129,27 @@ def submit_funding(request, article_id):
             article.save()
             return redirect(reverse('submit_review', kwargs={'article_id': article_id}))
 
-        funder_form = forms.FunderForm(
-            {
-                'name': request.POST.get('funder_name', None),
-                'fundref_id': request.POST.get('funder_doi', None),
-                'funding_id': request.POST.get('grant_number', None)
-            },
+        funder_form = forms.ArticleFundingForm(
+            request.POST,
             article=article,
         )
 
         if funder_form.is_valid():
             funder_form.save()
+            return redirect(
+                reverse(
+                    'submit_funding',
+                    kwargs={
+                        'article_id': article.pk,
+                    }
+                )
+            )
 
     template = 'admin/submission/submit_funding.html'
     context = {
         'article': article,
-        'form': form,
         'additional_fields': additional_fields,
-        'funder_form': forms.FunderForm(),
+        'funder_form': funder_form,
     }
 
     return render(request, template, context)
@@ -167,7 +168,11 @@ def submit_info(request, article_id):
     :return: HttpResponse or HttpRedirect
     """
     with translation.override(settings.LANGUAGE_CODE):
-        article = get_object_or_404(models.Article, pk=article_id)
+        article = get_object_or_404(
+            models.Article,
+            pk=article_id,
+            journal=request.journal,
+        )
         additional_fields = models.Field.objects.filter(journal=request.journal)
         submission_summary = setting_handler.get_setting(
             'general',
@@ -223,7 +228,10 @@ def publisher_notes_order(request, article_id):
         ids = request.POST.getlist('note[]')
         ids = [int(_id) for _id in ids]
 
-        article = models.Article.objects.get(pk=article_id)
+        article = models.Article.objects.get(
+            pk=article_id,
+            journal=request.journal,
+        )
 
         for he in article.publisher_notes.all():
             he.sequence = ids.index(he.pk)
@@ -244,7 +252,11 @@ def submit_authors(request, article_id):
     :param article_id: Article PK
     :return: HttpRedirect or HttpResponse
     """
-    article = get_object_or_404(models.Article, pk=article_id)
+    article = get_object_or_404(
+        models.Article,
+        pk=article_id,
+        journal=request.journal,
+    )
 
     if article.current_step < 2 and not request.user.is_staff:
         return redirect(reverse('submit_info', kwargs={'article_id': article_id}))
@@ -362,6 +374,90 @@ def submit_authors(request, article_id):
 
 
 @login_required
+@article_edit_user_required
+@decorators.funding_is_enabled
+def edit_funder(request, article_id, funder_id):
+    """
+    Allows staff, editor or article owner to edit a funding entry.
+    :param request: HttpRequest object
+    :param article_id: Article primary key
+    :param funder_id: Funder primary key
+    :return: HttpResponse or HttpRedirect
+    """
+    article = get_object_or_404(
+        models.Article,
+        pk=article_id,
+        journal=request.journal,
+    )
+    funder = get_object_or_404(
+        article.funders,
+        pk=funder_id,
+    )
+    form = forms.ArticleFundingForm(
+        instance=funder,
+        article=article,
+    )
+    # If the user is not an editor/section editor/journal manager/staff
+    # and the article is submitted we should raise PermissionDenied.
+    if article.date_submitted and not request.user.has_an_editor_role(request):
+        raise PermissionDenied(
+            'This article has been submitted and cannot be edited.'
+        )
+
+    if request.POST:
+        form = forms.ArticleFundingForm(
+            request.POST,
+            instance=funder,
+        )
+        if form.is_valid():
+            form.save()
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                'Article funding information saved.',
+            )
+            # The incoming link _should_ have a return value set to ensure
+            # the user gets back to the right place.
+            if request.GET.get('return'):
+                return redirect(request.GET['return'])
+
+            # If no return value is set we should try to work out where the
+            # user should be sent to.
+            if not article.date_submitted and article.owner == request.user:
+                # In this case, the article is not submitted and the current
+                # user is the owner, it's likely the user came from submission.
+                return redirect(
+                    reverse(
+                        'submit_funding',
+                        kwargs={
+                            'article_id': article.pk,
+                        }
+                    )
+                )
+            else:
+                return redirect(
+                    reverse(
+                        'edit_metadata',
+                        kwargs={
+                            'article_id': article.pk,
+                        }
+                    )
+                )
+
+    template = 'admin/submission/edit/funder.html'
+    context = {
+        'article': article,
+        'funder': funder,
+        'form': form,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@login_required
 @decorators.funding_is_enabled
 @article_edit_user_required
 def delete_funder(request, article_id, funder_id):
@@ -371,18 +467,18 @@ def delete_funder(request, article_id, funder_id):
         pk=article_id,
         journal=request.journal
     )
-    funding = get_object_or_404(
-        models.Funder,
-        pk=funder_id
+    article_funding = get_object_or_404(
+        models.ArticleFunding,
+        pk=funder_id,
+        article=article,
     )
 
-    article.funders.remove(funding)
+    article_funding.delete()
 
     if request.GET.get('return'):
         return redirect(request.GET['return'])
 
     return redirect(reverse('submit_funding', kwargs={'article_id': article_id}))
-
 
 
 @login_required
@@ -427,7 +523,11 @@ def submit_files(request, article_id):
     :param article_id: Article PK
     :return: HttpResponse
     """
-    article = get_object_or_404(models.Article, pk=article_id)
+    article = get_object_or_404(
+        models.Article,
+        pk=article_id,
+        journal=request.journal,
+    )
     form = forms.FileDetails()
     configuration = request.journal.submissionconfiguration
 
@@ -499,7 +599,7 @@ def submit_files(request, article_id):
                     return redirect(reverse(
                         'submit_review', kwargs={'article_id': article_id}))
             else:
-                error = "You must upload a manuscript file."
+                error = _("You must upload a manuscript file.")
 
     template = "admin/submission/submit_files.html"
 
@@ -525,7 +625,11 @@ def submit_review(request, article_id):
     :param article_id: Article PK
     :return: HttpResponse or HttpRedirect
     """
-    article = get_object_or_404(models.Article, pk=article_id)
+    article = get_object_or_404(
+        models.Article,
+        pk=article_id,
+        journal=request.journal,
+    )
 
     if article.current_step < 4 and not request.user.is_staff:
         return redirect(
@@ -534,43 +638,53 @@ def submit_review(request, article_id):
                 kwargs={'article_id': article_id},
             )
         )
+    form = forms.SubmissionCommentsForm(
+        instance=article,
+    )
 
     if request.POST and 'next_step' in request.POST:
-        article.date_submitted = timezone.now()
-        article.stage = models.STAGE_UNASSIGNED
-        article.current_step = 5
-        article.snapshot_authors(article)
-        article.save()
-
-        event_logic.Events.raise_event(
-            event_logic.Events.ON_WORKFLOW_ELEMENT_COMPLETE,
-            **{'handshake_url': 'submit_review',
-               'request': request,
-               'article': article,
-               'switch_stage': False}
+        form = forms.SubmissionCommentsForm(
+            request.POST,
+            instance=article,
         )
+        if form.is_valid():
+            form.save()
+            article.date_submitted = timezone.now()
+            article.stage = models.STAGE_UNASSIGNED
+            article.current_step = 5
+            article.snapshot_authors(article)
+            article.save()
 
-        messages.add_message(
-            request,
-            messages.SUCCESS,
-            _('Article {title} submitted').format(
-                title=article.title,
-            ),
-        )
+            event_logic.Events.raise_event(
+                event_logic.Events.ON_WORKFLOW_ELEMENT_COMPLETE,
+                **{'handshake_url': 'submit_review',
+                   'request': request,
+                   'article': article,
+                   'switch_stage': False}
+            )
 
-        kwargs = {'article': article,
-                  'request': request}
-        event_logic.Events.raise_event(
-            event_logic.Events.ON_ARTICLE_SUBMITTED,
-            task_object=article,
-            **kwargs
-        )
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                _('Article {title} submitted').format(
+                    title=article.title,
+                ),
+            )
 
-        return redirect(reverse('core_dashboard'))
+            kwargs = {'article': article,
+                      'request': request}
+            event_logic.Events.raise_event(
+                event_logic.Events.ON_ARTICLE_SUBMITTED,
+                task_object=article,
+                **kwargs
+            )
+
+            return redirect(reverse('core_dashboard'))
 
     template = "admin/submission//submit_review.html"
     context = {
         'article': article,
+        'form': form,
     }
 
     return render(request, template, context)
@@ -586,21 +700,31 @@ def edit_metadata(request, article_id):
     :return: contextualised django template
     """
     with translation.override(request.override_language):
-        article = get_object_or_404(models.Article, pk=article_id)
-        additional_fields = models.Field.objects.filter(journal=request.journal)
+        article = get_object_or_404(
+            models.Article,
+            pk=article_id,
+            journal=request.journal,
+        )
+        additional_fields = models.Field.objects.filter(
+            journal=request.journal,
+        )
         submission_summary = setting_handler.get_setting(
             'general',
             'submission_summary',
             request.journal,
         ).processed_value
-        funder_form = forms.FunderForm()
+        funder_form = forms.ArticleFundingForm(
+            article=article,
+        )
+
         info_form = forms.ArticleInfo(
             instance=article,
             additional_fields=additional_fields,
             submission_summary=submission_summary,
             pop_disabled_fields=False,
+            editor_view=True,
         )
-        frozen_author, modal = None, None
+
         return_param = request.GET.get('return')
         reverse_url = create_language_override_redirect(
             request,
@@ -609,20 +733,17 @@ def edit_metadata(request, article_id):
             query_strings={'return': return_param}
         )
 
+        frozen_author, modal, author_form = None, None, forms.EditFrozenAuthor()
         if request.GET.get('author'):
             frozen_author, modal = logic.get_author(request, article)
             author_form = forms.EditFrozenAuthor(instance=frozen_author)
-        else:
-            author_form = forms.EditFrozenAuthor()
+        elif request.GET.get('modal') == 'author':
+            modal = 'author'
 
         if request.POST:
             if 'add_funder' in request.POST:
-                funder_form = forms.FunderForm(
-                    {
-                        'name': request.POST.get('funder_name', None),
-                        'fundref_id': request.POST.get('funder_doi', None),
-                        'funding_id': request.POST.get('grant_number', None)
-                    },
+                funder_form = forms.ArticleFundingForm(
+                    request.POST,
                     article=article,
                 )
                 if funder_form.is_valid():
@@ -633,8 +754,10 @@ def edit_metadata(request, article_id):
                 info_form = forms.ArticleInfo(
                     request.POST,
                     instance=article,
+                    additional_fields=additional_fields,
                     submission_summary=submission_summary,
                     pop_disabled_fields=False,
+                    editor_view=True,
                 )
 
                 if info_form.is_valid():

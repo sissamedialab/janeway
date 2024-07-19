@@ -20,6 +20,7 @@ FROZEN_DATETIME_2012 = timezone.make_aware(timezone.datetime(2012, 1, 14, 0, 0, 
 FROZEN_DATETIME_1990 = timezone.make_aware(timezone.datetime(1990, 1, 1, 0, 0, 0))
 FROZEN_DATETIME_1976 = timezone.make_aware(timezone.datetime(1976, 1, 2, 0, 0, 0))
 
+
 class TestOAIViews(TestCase):
 
     @classmethod
@@ -155,7 +156,6 @@ class TestOAIViews(TestCase):
             SERVER_NAME="testserver"
         )
 
-
         self.maxDiff = None
         self.assertEqual(str(response.rendered_content).split(), expected.split())
 
@@ -199,7 +199,20 @@ class TestOAIViews(TestCase):
     @override_settings(URL_CONFIG="domain")
     @freeze_time(FROZEN_DATETIME_2012)
     def test_list_sets(self):
-        expected = LIST_SETS_DATA_DC
+        section = sm_models.Section.objects.get(
+            journal__code=self.journal.code,
+            name='Article',
+        )
+        expected = LIST_SETS_DATA_DC.format(
+            journal_code=self.journal.code,
+            journal_name=self.journal.name,
+            section_name=section.name,
+            section_id=section.pk,
+            issue_one_id=self.issue.pk,
+            issue_one_title=self.issue.non_pretty_issue_identifier,
+            issue_two_id=self.issue_2.pk,
+            issue_two_title=self.issue_2.non_pretty_issue_identifier,
+        )
 
         path = reverse('OAI_list_records')
         query_params = dict(
@@ -327,7 +340,7 @@ LIST_RECORDS_DATA_JATS = """
     <datestamp>1986-07-12T15:00:00Z</datestamp>
     </header>
         <metadata>
-    <article article-type="research-article" dtd-version="1.0" xml:lang="en" xmlns="https://jats.nlm.nih.gov/publishing/1.2/" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <article article-type="research-article" dtd-version="1.0" xml:lang="en" xmlns:jats="https://jats.nlm.nih.gov/publishing/1.2/" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <front>
             <journal-meta>
                 <journal-id journal-id-type="issn">0000-0000</journal-id>
@@ -368,6 +381,7 @@ LIST_RECORDS_DATA_JATS = """
                 <volume seq="0">1</volume>
                 <issue>1</issue>
                 <issue-id>1</issue-id>
+                <issue-title xml:lang="en">Test Issue from Utils Testing Helpers</issue-title>
                 <permissions>
                     <copyright-statement>Copyright: © 1986 The Author(s)</copyright-statement>
                     <copyright-year>1986</copyright-year>
@@ -483,7 +497,7 @@ GET_RECORD_DATA_JATS = """
     <datestamp>1986-07-12T15:00:00Z</datestamp>
     </header>
         <metadata>
-    <article article-type="research-article" dtd-version="1.0" xml:lang="en" xmlns="https://jats.nlm.nih.gov/publishing/1.2/" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <article article-type="research-article" dtd-version="1.0" xml:lang="en" xmlns:jats="https://jats.nlm.nih.gov/publishing/1.2/" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <front>
             <journal-meta>
                 <journal-id journal-id-type="issn">0000-0000</journal-id>
@@ -532,6 +546,7 @@ GET_RECORD_DATA_JATS = """
                 <volume seq="0">1</volume>
                 <issue>1</issue>
                 <issue-id>1</issue-id>
+                <issue-title xml:lang="en">Test Issue from Utils Testing Helpers</issue-title>
                 <permissions>
                     <copyright-statement>Copyright: © 1986 The Author(s)</copyright-statement>
                     <copyright-year>1986</copyright-year>
@@ -613,25 +628,25 @@ LIST_SETS_DATA_DC = """
         <ListSets>
 
                 <set>
-                    <setSpec>TST</setSpec>
-                    <setName>Journal One</setName>
+                    <setSpec>{journal_code}</setSpec>
+                    <setName>{journal_name}</setName>
                 </set>
 
 
                 <set>
-                    <setSpec>TST:issue:1</setSpec>
-                    <setName>Volume 1 Issue 1 2022 Test Issue from Utils Testing Helpers</setName>
+                    <setSpec>{journal_code}:issue:{issue_one_id}</setSpec>
+                    <setName>{issue_one_title}</setName>
                 </set>
 
                 <set>
-                    <setSpec>TST:issue:2</setSpec>
-                    <setName>Volume 1 Issue 2 2022 Test Issue from Utils Testing Helpers</setName>
+                    <setSpec>{journal_code}:issue:{issue_two_id}</setSpec>
+                    <setName>{issue_two_title}</setName>
                 </set>
 
 
                 <set>
-                    <setSpec>TST:section:1</setSpec>
-                    <setName>Article</setName>
+                    <setSpec>{journal_code}:section:{section_id}</setSpec>
+                    <setName>{section_name}</setName>
                 </set>
 
         </ListSets>

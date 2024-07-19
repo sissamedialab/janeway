@@ -4,6 +4,9 @@ __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 import operator
+from dateutil.relativedelta import relativedelta
+from datetime import datetime
+from dateutil import tz
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -19,7 +22,12 @@ from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
 
 from repository import forms, logic as repository_logic, models
-from core import models as core_models, files, logic as core_logic, forms as core_forms
+from core import (
+    email as core_email,
+    files,
+    forms as core_forms,
+    models as core_models,
+)
 from journal import models as journal_models
 from submission import models as submission_models
 
@@ -238,17 +246,23 @@ def repository_author_article(request, preprint_id):
         stage__in=models.SUBMITTED_STAGES,
         repository=request.repository,
     )
-    metrics_summary = repository_logic.metrics_summary([preprint])
 
     template = 'admin/repository/author_article.html'
     context = {
         'preprint': preprint,
-        'metrics_summary': metrics_summary,
         'preprint_journals': repository_logic.get_list_of_preprint_journals(),
         'pending_updates': models.VersionQueue.objects.filter(
             preprint=preprint,
             date_decision__isnull=True,
         ),
+        'views': models.PreprintAccess.objects.filter(
+            preprint=preprint,
+            file__isnull=True,
+        ).count(),
+        'downloads': models.PreprintAccess.objects.filter(
+            preprint=preprint,
+            file__isnull=False,
+        ).count(),
     }
 
     return render(request, template, context)
@@ -348,7 +362,10 @@ def repository_search(request, search_term=None):
     )
 
     if search_term:
-        split_search_term = search_term.split(' ')
+        search_term = search_term.strip()
+        split_search_term = [
+            term.strip() for term in search_term.split(' ') if term
+        ]
 
         # Initial filter on Title, Abstract and Keywords.
         preprint_search = preprints.filter(
@@ -363,6 +380,10 @@ def repository_search(request, search_term=None):
                 Q(account__middle_name__in=split_search_term) |
                 Q(account__last_name__in=split_search_term) |
                 Q(account__institution__icontains=search_term)
+            )
+            &
+            (
+                Q(preprint__repository=request.repository)
             )
         )
 
@@ -490,7 +511,7 @@ def repository_pdf(request, preprint_id):
 
     pdf_url = request.GET.get('file')
 
-    template = 'repository/pdf.html'
+    template = 'common/repository/pdf.html'
     context = {
         'pdf_url': pdf_url,
     }
@@ -818,8 +839,7 @@ def preprints_manager(request):
         date_declined__isnull=False,
         repository=request.repository,
     )
-    metrics_summary = repository_logic.metrics_summary(published_preprints)
-    versisons = models.VersionQueue.objects.filter(
+    versions = models.VersionQueue.objects.filter(
         date_decision__isnull=True,
         preprint__repository=request.repository,
     )
@@ -834,8 +854,7 @@ def preprints_manager(request):
         'published_preprints': published_preprints,
         'incomplete_preprints': incomplete_preprints,
         'rejected_preprints': rejected_preprints,
-        'version_queue': versisons,
-        'metrics_summary': metrics_summary,
+        'version_queue': versions,
         'subjects': subjects,
     }
 
@@ -869,30 +888,46 @@ def repository_manager_article(request, preprint_id):
                     messages.WARNING,
                     'You must assign at least one galley file.',
                 )
+                redirect_request = False
             else:
-                date_kwargs = {
-                    'date': request.POST.get('date', timezone.now().date()),
-                    'time': request.POST.get('time', timezone.now().time()),
-                }
-                if preprint.date_published:
-                    preprint.update_date_published(**date_kwargs)
-                else:
-                    preprint.accept(**date_kwargs)
-                    event_logic.Events.raise_event(
-                        event_logic.Events.ON_PREPRINT_PUBLICATION,
-                        **{
-                            'request': request,
-                            'preprint': preprint,
-                        },
-                    )
-                    return redirect(
-                        reverse(
-                            'repository_notification',
-                            kwargs={'preprint_id': preprint.pk},
+                try:
+                    d = datetime.fromisoformat(request.POST.get('datetime', timezone.now().strftime("%Y-%m-%d %H:%M")))
+                    t = tz.gettz(request.POST.get('timezone', str(timezone.get_current_timezone())))
+
+                    date_published = datetime(d.year, d.month, d.day, d.hour, d.minute, tzinfo=t)
+                    date_kwargs = {
+                        'date_published': date_published
+                    }
+                    if preprint.date_published:
+                        preprint.update_date_published(**date_kwargs)
+                    else:
+                        preprint.accept(**date_kwargs)
+                        event_logic.Events.raise_event(
+                            event_logic.Events.ON_PREPRINT_PUBLICATION,
+                            **{
+                                'request': request,
+                                'preprint': preprint,
+                            },
                         )
+                        return redirect(
+                            reverse(
+                                'repository_notification',
+                                kwargs={'preprint_id': preprint.pk},
+                            )
+                        )
+                    redirect_request = True
+                except ValueError:
+                    # This is unlikely to happen because the form widget
+                    # does not accept invalid dates. If we somehow get a bad
+                    # date just send the user back to the accept_preprint modal
+                    redirect_request = False
+                    modal = "accept_preprint"
+                    messages.add_message(
+                        request,
+                        messages.ERROR,
+                        'Invalid publication date selected',
                     )
 
-            redirect_request = True
 
         if 'decline' in request.POST:
             note = request.POST.get('decline_note')
@@ -1537,10 +1572,14 @@ def repository_wizard(request, short_name=None, step='1'):
                     )
                 )
 
-            # Bump the step by 1
-            kwargs = {'step': int(step) + 1}
-            if updated_repository:
-                kwargs['short_name'] = updated_repository.short_name
+            kwargs = {
+                'short_name': updated_repository.short_name,
+                'step': step,
+            }
+
+            if 'next' in request.POST:
+                kwargs['step'] = str(int(step) + 1)
+
             return redirect(
                 reverse(
                     'repository_wizard_with_id',
@@ -2365,9 +2404,9 @@ def send_user_email(request, user_id, preprint_id):
         form = core_forms.EmailForm(request.POST)
 
         if form.is_valid():
-            core_logic.send_email(
+            core_email.send_email(
                 user,
-                form,
+                form.as_dataclass(),
                 request,
                 article,
                 preprint,
@@ -2382,3 +2421,88 @@ def send_user_email(request, user_id, preprint_id):
         'article': article,
     }
     return render(request, template, context)
+
+
+@is_repository_manager
+def list_review_recommendations(request):
+    recommendations = models.ReviewRecommendation.objects.filter(
+        repository=request.repository,
+    )
+    if request.POST and 'delete' in request.POST:
+        recommendation_id = request.POST.get('delete')
+        try:
+            recommendation = models.ReviewRecommendation.objects.get(
+                pk=recommendation_id,
+            )
+            if not recommendation.review_set.exists():
+                recommendation.delete()
+                messages.add_message(
+                    request,
+                    messages.SUCCESS,
+                    'Recommendation deleted.',
+                )
+            else:
+                messages.add_message(
+                    request,
+                    messages.INFO,
+                    'Recommendation is linked to reviews. You can mark it as'
+                    ' inactive if you no longer wish to use it.',
+                )
+        except models.ReviewRecommendation.DoesNotExist:
+            messages.add_message(
+                request,
+                messages.WARNING,
+                'No recommendation found with that ID.',
+            )
+        return redirect(
+            reverse(
+                'repository_list_review_recommendations'
+            )
+        )
+    template = 'admin/repository/review/list_review_recommendations.html'
+    context = {
+        'recommendations': recommendations,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@is_repository_manager
+def manage_review_recommendation(request, recommendation_id=None):
+    recommendation = None
+    if recommendation_id:
+        recommendation = get_object_or_404(
+            models.ReviewRecommendation,
+            pk=recommendation_id,
+            repository=request.repository,
+        )
+    form = forms.RecommendationForm(
+        instance=recommendation,
+        repository=request.repository,
+    )
+    if request.POST:
+        form = forms.RecommendationForm(
+            request.POST,
+            instance=recommendation,
+            repository=request.repository,
+        )
+        if form.is_valid():
+            form.save()
+            return redirect(
+                reverse(
+                    'repository_list_review_recommendations'
+                )
+            )
+    template = 'admin/repository/review/manage_review_recommendation.html'
+    context = {
+        'recommendation': recommendation,
+        'form': form,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )

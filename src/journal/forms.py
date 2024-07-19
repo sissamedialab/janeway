@@ -9,11 +9,12 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
 
-from django_summernote.widgets import SummernoteWidget
+from tinymce.widgets import TinyMCE
 
 from core import models as core_models
+from core.forms import FullSettingEmailForm
 from journal import models as journal_models, logic
-from utils.forms import CaptchaForm, LeftBooleanField
+from utils.forms import CaptchaForm
 
 SEARCH_SORT_OPTIONS = [
         # Translators: Search order options
@@ -60,7 +61,7 @@ class ContactForm(forms.ModelForm, CaptchaForm):
 class ResendEmailForm(forms.Form):
     to = forms.CharField(max_length=1000, help_text='Seperate email addresses with ;')
     subject = forms.CharField(max_length=1000)
-    body = forms.CharField(widget=SummernoteWidget)
+    body = forms.CharField(widget=TinyMCE)
 
     def __init__(self, *args, **kwargs):
         log_entry = kwargs.pop('log_entry')
@@ -92,14 +93,15 @@ class SearchForm(forms.Form):
         if self.data and not self.has_filter:
             for search_filter in self.SEARCH_FILTERS:
                 self.data[search_filter] = "on"
+        self.label_suffix = ''
 
     article_search = forms.CharField(label=_('Search term'), min_length=3, max_length=100, required=False)
-    title = LeftBooleanField(initial=True, label=_('Search Titles'), required=False)
-    abstract = LeftBooleanField(initial=True, label=_('Search Abstract'), required=False)
-    authors = LeftBooleanField(initial=True, label=_('Search Authors'), required=False)
-    keywords = LeftBooleanField(initial=True, label=_("Search Keywords"), required=False)
-    full_text = LeftBooleanField(initial=True, label=_("Search Full Text"), required=False)
-    orcid = LeftBooleanField(label=_("Search ORCIDs"), required=False)
+    title = forms.BooleanField(initial=True, label=_('Search Titles'), required=False)
+    abstract = forms.BooleanField(initial=True, label=_('Search Abstract'), required=False)
+    authors = forms.BooleanField(initial=True, label=_('Search Authors'), required=False)
+    keywords = forms.BooleanField(initial=True, label=_("Search Keywords"), required=False)
+    full_text = forms.BooleanField(initial=True, label=_("Search Full Text"), required=False)
+    orcid = forms.BooleanField(label=_("Search ORCIDs"), required=False)
     sort = forms.ChoiceField(label=_('Sort results by'), widget=forms.Select, choices=SEARCH_SORT_OPTIONS)
 
     def get_search_filters(self):
@@ -133,4 +135,24 @@ class IssueDisplayForm(forms.ModelForm):
             'display_article_number',
             'display_article_page_numbers',
             'display_issue_doi',
+            'display_issues_grouped_by_decade',
         )
+
+
+class BasePrepubNotificationFormSet(forms.BaseFormSet):
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        if index == 0:
+            kwargs['setting_name'] = 'author_publication'
+        elif index == 1:
+            kwargs['setting_name'] = 'peer_reviewer_pub_notification'
+        return kwargs
+
+
+PrepubNotificationFormSet = forms.formset_factory(
+    FullSettingEmailForm,
+    formset=BasePrepubNotificationFormSet,
+    extra=0,
+    max_num=2,
+)

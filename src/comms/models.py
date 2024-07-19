@@ -5,13 +5,23 @@ from django.urls import reverse
 from django.utils import timezone
 from django.http import Http404
 from django.utils.translation import gettext as _
+from simple_history.models import HistoricalRecords
 
 from core import files
+from core.model_utils import JanewayBleachField
 
 __copyright__ = "Copyright 2017 Birkbeck, University of London"
 __author__ = "Martin Paul Eve & Andy Byers"
 __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
+
+
+class ActiveNewsItemManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            (models.Q(start_display__lte=timezone.now()) | models.Q(start_display=None))
+            & (models.Q(end_display__gte=timezone.now()) | models.Q(end_display=None))
+        )
 
 
 class NewsItem(models.Model):
@@ -20,7 +30,7 @@ class NewsItem(models.Model):
     object = GenericForeignKey('content_type', 'object_id')
 
     title = models.CharField(max_length=500)
-    body = models.TextField()
+    body = JanewayBleachField()
     posted = models.DateTimeField(default=timezone.now)
     posted_by = models.ForeignKey('core.Account', blank=True, null=True, on_delete=models.SET_NULL)
 
@@ -28,8 +38,16 @@ class NewsItem(models.Model):
     end_display = models.DateField(blank=True, null=True)
     sequence = models.PositiveIntegerField(default=0)
 
-    large_image_file = models.ForeignKey('core.File', null=True, blank=True, related_name='large_news_file',
-                                         on_delete=models.SET_NULL)
+    large_image_file = models.ForeignKey(
+        'core.File',
+        null=True,
+        blank=True,
+        related_name='large_news_file',
+        on_delete=models.SET_NULL,
+        help_text='An image for the top of the news item page and the '
+                  'news list page. Note that it will be automatically '
+                  'cropped to 750px x 324px, so wide images work best.',
+    )
     tags = models.ManyToManyField('Tag', related_name='tags')
     custom_byline = models.CharField(
         max_length=255,
@@ -38,9 +56,18 @@ class NewsItem(models.Model):
         help_text="If you want a custom byline add it here. This will overwrite the display of the user who created "
                   "the news item with whatever text is added here.",
     )
+    history = HistoricalRecords()
+
+    pinned = models.BooleanField(
+        default=False,
+        help_text="Pinned news items will appear at the top of the news list"
+    )
+
+    objects = models.Manager()
+    active_objects = ActiveNewsItemManager()
 
     class Meta:
-        ordering = ('-posted', 'title')
+        ordering = ('pinned', '-posted', 'title')
 
     @property
     def url(self):

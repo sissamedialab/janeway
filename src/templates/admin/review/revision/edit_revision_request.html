@@ -3,11 +3,11 @@
 
 {% block title %}Edit Revision{% endblock title %}
 {% block title-section %}Edit Revision{% endblock %}
-{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.title }}{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
-    {% include "elements/breadcrumbs/review_base.html" %}
+    {% include "elements/breadcrumbs/review_base.html" with subpage="yes" %}
     <li>Edit Revision</li>
 {% endblock breadcrumbs %}
 
@@ -56,6 +56,5 @@
 {% endblock body %}
 
 {% block js %}
-    {% include "elements/datepicker.html" with target="#id_date_due" %}
     {% include "elements/jqte.html" %}
 {% endblock js %}

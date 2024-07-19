@@ -28,11 +28,11 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
 from django.utils import translation
-from django.db.models import Q
-from django.utils.decorators import method_decorator
+from django.db.models import Q, OuterRef, Subquery, Count, Avg
 from django.views import generic
 
 from core import models, forms, logic, workflow, models as core_models
+from core.model_utils import NotImplementedField, search_model_admin
 from security.decorators import (
     editor_user_required, article_author_required, has_journal,
     any_editor_user_required, role_can_access,
@@ -45,11 +45,11 @@ from production import models as production_models
 from journal import models as journal_models
 from proofing import logic as proofing_logic
 from proofing import models as proofing_models
+from press import forms as press_forms
 from utils import models as util_models, setting_handler, orcid
 from utils.logger import get_logger
 from utils.decorators import GET_language_override
-from utils.shared import language_override_redirect
-from utils.logic import get_janeway_version
+from utils.shared import language_override_redirect, clear_cache
 from repository import models as rm
 from events import logic as events_logic
 
@@ -74,8 +74,8 @@ def user_login(request):
 
     if bad_logins >= 10:
         messages.info(
-                request,
-                'You have been banned from logging in due to failed attempts.'
+            request,
+            _('You have been banned from logging in due to failed attempts.'),
         )
         logger.warning("[LOGIN_DENIED][FAILURES:%d]" % bad_logins)
         return redirect(reverse('website_index'))
@@ -118,15 +118,19 @@ def user_login(request):
 
                 if empty_password_check:
                     messages.add_message(request, messages.INFO,
-                                         'Password reset process has been initiated, please check your inbox for a'
-                                         ' reset request link.')
+                        _(
+                            'Password reset process has been initiated,'
+                            ' please check your inbox for a'
+                            ' reset request link.'
+                        ),
+                    )
                     logic.start_reset_process(request, empty_password_check)
                 else:
 
                     messages.add_message(
                         request, messages.ERROR,
-                        'Wrong email/password combination or your'
-                        ' email address has not been confirmed yet.',
+                        _('Wrong email/password combination or your'
+                        ' email address has not been confirmed yet.'),
                     )
                     util_models.LogEntry.add_entry(types='Authentication',
                                                    description='Failed login attempt for user {0}'.format(
@@ -212,7 +216,7 @@ def user_logout(request):
     :param request: HttpRequest object
     :return: HttpResponse object
     """
-    messages.info(request, 'You have been logged out.')
+    messages.info(request, _('You have been logged out.'))
     logout(request)
     return redirect(reverse('website_index'))
 
@@ -227,7 +231,10 @@ def get_reset_token(request):
 
     if request.POST:
         email_address = request.POST.get('email_address')
-        messages.add_message(request, messages.INFO, 'If your account was found, an email has been sent to you.')
+        messages.add_message(
+                request, messages.INFO,
+                _('If your account was found, an email has been sent to you.'),
+        )
         try:
             account = models.Account.objects.get(email__iexact=email_address)
             logic.start_reset_process(request, account)
@@ -343,8 +350,11 @@ def register(request):
                 new_user.add_account_role('author', request.journal)
             logic.send_confirmation_link(request, new_user)
 
-            messages.add_message(request, messages.SUCCESS, 'Your account has been created, please follow the'
-                                                            'instructions in the email that has been sent to you.')
+            messages.add_message(
+                request, messages.SUCCESS,
+                _('Your account has been created, please follow the'
+                'instructions in the email that has been sent to you.'),
+            )
             return redirect(reverse('core_login'))
 
     template = 'core/accounts/register.html'
@@ -387,7 +397,7 @@ def activate_account(request, token):
         messages.add_message(
             request,
             messages.SUCCESS,
-            'Account activated',
+            _('Account activated'),
         )
 
         return redirect(reverse('core_login'))
@@ -417,6 +427,13 @@ def edit_profile(request):
             request.journal
         ).value
 
+    if user.staffgroupmember_set.first():
+        staff_group_membership_form = press_forms.StaffGroupMemberForm(
+            instance=user.staffgroupmember_set.first()
+        )
+    else:
+        staff_group_membership_form = None
+
     if request.POST:
         if 'email' in request.POST:
             email_address = request.POST.get('email_address')
@@ -429,13 +446,13 @@ def edit_profile(request):
                     messages.add_message(
                         request,
                         messages.WARNING,
-                        'An account with that email address already exists.',
+                        _('An account with that email address already exists.'),
                     )
             except ValidationError:
                 messages.add_message(
                     request,
                     messages.WARNING,
-                    'Email address is not valid.',
+                    _('Email address is not valid.'),
                 )
 
         elif 'change_password' in request.POST:
@@ -450,14 +467,14 @@ def edit_profile(request):
                     if not problems:
                         request.user.set_password(new_pass_one)
                         request.user.save()
-                        messages.add_message(request, messages.SUCCESS, 'Password updated.')
+                        messages.add_message(request, messages.SUCCESS, _('Password updated.'))
                     else:
                         [messages.add_message(request, messages.INFO, problem) for problem in problems]
                 else:
-                    messages.add_message(request, messages.WARNING, 'Passwords do not match')
+                    messages.add_message(request, messages.WARNING, _('Passwords do not match'))
 
             else:
-                messages.add_message(request, messages.WARNING, 'Old password is not correct.')
+                messages.add_message(request, messages.WARNING, _('Old password is not correct.'))
 
         elif 'subscribe' in request.POST and send_reader_notifications:
             request.user.add_account_role(
@@ -467,7 +484,7 @@ def edit_profile(request):
             messages.add_message(
                 request,
                 messages.SUCCESS,
-                'Successfully subscribed to article notifications.',
+                _('Successfully subscribed to article notifications.'),
             )
 
         elif 'unsubscribe' in request.POST and send_reader_notifications:
@@ -478,7 +495,7 @@ def edit_profile(request):
             messages.add_message(
                 request,
                 messages.SUCCESS,
-                'Successfully unsubscribed from article notifications.',
+                _('Successfully unsubscribed from article notifications.'),
             )
 
         elif 'edit_profile' in request.POST:
@@ -489,12 +506,24 @@ def edit_profile(request):
                 messages.add_message(request, messages.SUCCESS, 'Profile updated.')
                 return redirect(reverse('core_edit_profile'))
 
+        elif 'edit_staff_member_info' in request.POST:
+            form = press_forms.StaffGroupMemberForm(
+                request.POST,
+                instance=user.staffgroupmember_set.first()
+            )
+
+            if form.is_valid():
+                form.save()
+                messages.add_message(request, messages.SUCCESS, 'Staff member info updated.')
+                return redirect(reverse('core_edit_profile'))
+
         elif 'export' in request.POST:
             return logic.export_gdpr_user_profile(user)
 
     template = 'core/accounts/edit_profile.html'
     context = {
         'form': form,
+        'staff_group_membership_form': staff_group_membership_form,
         'user_to_edit': user,
         'send_reader_notifications': send_reader_notifications,
     }
@@ -516,16 +545,28 @@ def public_profile(request, uuid):
         is_active=True,
         enable_public_profile=True,
     )
-    roles = models.AccountRole.objects.filter(
-        user=user,
-        journal=request.journal,
-    )
-
     template = 'core/accounts/public_profile.html'
     context = {
         'user': user,
-        'roles': roles,
     }
+
+    if request.journal:
+        context['editorial_groups'] = user.editorialgroupmember_set.filter(
+            group__journal=request.journal
+        )
+        context['roles'] = models.AccountRole.objects.filter(
+            user=user,
+            journal=request.journal,
+        )
+        if not context['roles']:
+            raise Http404()
+
+    elif request.press:
+        context['editorial_groups'] = user.editorialgroupmember_set.filter(
+            group__press=request.press,
+            group__journal__isnull=True,
+        )
+        context['staff_groups'] = user.staffgroupmember_set.all()
 
     return render(request, template, context)
 
@@ -699,7 +740,11 @@ def dashboard_article(request, article_id):
     :param article_id: int, Article object primary key
     :return: HttpResponse object
     """
-    article = get_object_or_404(submission_models.Article, pk=article_id)
+    article = get_object_or_404(
+        submission_models.Article,
+        pk=article_id,
+        journal=request.journal,
+    )
 
     template = 'core/article.html'
     context = {
@@ -825,9 +870,14 @@ def edit_setting(request, setting_group, setting_name):
             )
             if edit_form.is_valid():
                 if request.FILES:
-                    value = logic.handle_file(request, setting_value, request.FILES['value'])
+                    value = logic.handle_file(
+                        request,
+                        setting_value,
+                        request.FILES['value']
+                    )
 
-                # for JSON setting we should validate the JSON by attempting to load the string.
+                # for JSON setting we should validate the JSON by attempting
+                # to load the string.
 
                 try:
                     setting_value = setting_handler.save_setting(
@@ -844,9 +894,11 @@ def edit_setting(request, setting_group, setting_name):
                 return language_override_redirect(
                     request,
                     'core_edit_setting',
-                    {'setting_group': setting_group, 'setting_name': setting_name},
+                    {
+                        'setting_group': setting_group,
+                        'setting_name': setting_name
+                    },
                 )
-
 
         template = 'core/manager/settings/edit_setting.html'
         context = {
@@ -1042,7 +1094,39 @@ def role(request, slug):
     """
     role_obj = get_object_or_404(models.Role, slug=slug)
 
-    account_roles = models.AccountRole.objects.filter(journal=request.journal, role=role_obj)
+    account_roles = models.AccountRole.objects.filter(
+        journal=request.journal,
+        role=role_obj,
+    ).select_related(
+        'user',
+        'journal',
+    )
+
+    # Grab additional context for the reviewer page.
+    if slug == 'reviewer':
+        account_roles = account_roles.prefetch_related(
+            'user__interest',
+        ).annotate(
+            total_assignments=Count(
+                'user__reviewer',
+                filter=Q(user__reviewer__article__journal=request.journal),
+            ),
+            last_completed_review=Subquery(
+                review_models.ReviewAssignment.objects.filter(
+                    reviewer=OuterRef('user__pk'),
+                    is_complete=True,
+                    date_complete__isnull=False,
+                    article__journal=request.journal,
+                ).order_by('-date_complete').values('date_complete')[:1]
+            ),
+            average_score=Subquery(
+                review_models.ReviewerRating.objects.filter(
+                    assignment__reviewer=OuterRef('user__pk')
+                ).values('assignment__reviewer').annotate(
+                    avg_score=Avg('rating')
+                ).values('avg_score')[:1]
+            )
+        )
 
     template = 'core/manager/roles/role.html'
     context = {
@@ -1119,9 +1203,10 @@ def add_user(request):
         if registration_form.is_valid():
             new_user = registration_form.save()
             # Every new user is given the author role
-            new_user.add_account_role('author', request.journal)
+            if request.journal:
+                new_user.add_account_role('author', request.journal)
 
-            if role:
+            if role and request.journal:
                 new_user.add_account_role(role, request.journal)
 
             form = forms.EditAccountForm(
@@ -1177,6 +1262,11 @@ def user_edit(request, user_id):
             registration_form.save()
             form.save()
             messages.add_message(request, messages.SUCCESS, 'Profile updated.')
+
+            if request.GET.get('return'):
+                return redirect(
+                    request.GET.get('return')
+                )
 
             return redirect(reverse('core_manager_users'))
 
@@ -1272,13 +1362,15 @@ def enrol_users(request):
     first_name = request.GET.get('first_name', '')
     last_name = request.GET.get('last_name', '')
     email = request.GET.get('email', '')
-    roles = models.Role.objects.exclude(
+    assignable_roles = models.Role.objects.exclude(
         slug__in=['reader'],
     ).order_by(('name'))
 
     # if the current user is not staff, exclude the journal-manager role.
     if not request.user.is_staff:
-        roles.exclude(slug__in='journal-manager')
+        assignable_roles = assignable_roles.exclude(
+            slug='journal-manager',
+        )
 
     if first_name or last_name or email:
         filters = {}
@@ -1294,7 +1386,7 @@ def enrol_users(request):
     template = 'core/manager/users/enrol_users.html'
     context = {
         'user_search': user_search,
-        'roles': roles,
+        'roles': assignable_roles,
         'first_name': first_name,
         'last_name': last_name,
         'email': email,
@@ -1554,26 +1646,55 @@ def contacts_order(request):
 
 
 @editor_user_required
+@GET_language_override
 def editorial_team(request):
     """
     Displays a list of EditorialGroup objects, allows them to be deleted and created,
     :param request: HttpRequest object
     :return: HttpResponse object
     """
-    editorial_groups = models.EditorialGroup.objects.filter(journal=request.journal)
+    with translation.override(request.override_language):
+        editorial_groups = models.EditorialGroup.objects.filter(
+            journal=request.journal,
+        )
+        settings, setting_group = logic.get_settings_to_edit(
+            'editorial',
+            request.journal,
+            request.user,
+        )
+        edit_form = forms.GeneratedSettingForm(settings=settings)
+        if request.POST:
+            edit_form = forms.GeneratedSettingForm(
+                request.POST,
+                settings=settings,
+            )
 
-    if 'delete' in request.POST:
-        delete_id = request.POST.get('delete')
-        group = get_object_or_404(models.EditorialGroup, pk=delete_id, journal=request.journal)
-        group.delete()
-        return redirect(reverse('core_editorial_team'))
+            if edit_form.is_valid():
+                edit_form.save(
+                    group=setting_group,
+                    journal=request.journal,
+                )
+                # clear cache to ensure changes display immediately
+                clear_cache()
+                return language_override_redirect(
+                    request,
+                    'core_editorial_team',
+                    kwargs={},
+                )
 
-    template = 'core/manager/editorial/index.html'
-    context = {
-        'editorial_groups': editorial_groups,
-    }
+        if 'delete' in request.POST:
+            delete_id = request.POST.get('delete')
+            group = get_object_or_404(models.EditorialGroup, pk=delete_id, journal=request.journal)
+            group.delete()
+            return redirect(reverse('core_editorial_team'))
 
-    return render(request, template, context)
+        template = 'core/manager/editorial/index.html'
+        context = {
+            'editorial_groups': editorial_groups,
+            'edit_form': edit_form,
+        }
+
+        return render(request, template, context)
 
 
 @editor_user_required
@@ -1587,14 +1708,23 @@ def edit_editorial_group(request, group_id=None):
     """
     with translation.override(request.override_language):
         if group_id:
-            group = get_object_or_404(models.EditorialGroup, pk=group_id, journal=request.journal)
+            group = get_object_or_404(
+                models.EditorialGroup,
+                pk=group_id,
+                journal=request.journal,
+                press=request.press,
+            )
             form = forms.EditorialGroupForm(
                 instance=group,
             )
         else:
             group = None
+            try:
+                next_sequence = request.journal.next_group_order()
+            except AttributeError:
+                next_sequence = request.press.next_group_order()
             form = forms.EditorialGroupForm(
-                next_sequence=request.journal.next_group_order(),
+                next_sequence=next_sequence
             )
 
         if request.POST:
@@ -1605,6 +1735,7 @@ def edit_editorial_group(request, group_id=None):
                 else:
                     group = form.save(commit=False)
                     group.journal = request.journal
+                    group.press = request.press
                     group.save()
 
                 return language_override_redirect(
@@ -1625,7 +1756,8 @@ def edit_editorial_group(request, group_id=None):
 @editor_user_required
 def add_member_to_group(request, group_id, user_id=None):
     """
-    Displays a list of users that are eligible to be added to an Editorial Group and displays those already in said
+    Displays a list of users that are eligible to be added to an Editorial
+    Group and displays those already in said
     group. Members can also be removed from Groups.
     :param request: HttpRequest object
     :param group_id: EditorialGroup object PK
@@ -2279,12 +2411,19 @@ def manage_access_requests(request):
     )
 
 
-@method_decorator(staff_member_required, name='dispatch')
-class FilteredArticlesListView(generic.ListView):
-    model = submission_models.Article
-    template_name = 'core/manager/article_list.html'
+class GenericFacetedListView(generic.ListView):
+    """
+    This is a generic base class for creating filterable list views
+    with Janeway models.
+    """
+    model = NotImplementedField
+    template_name = NotImplementedField
+
     paginate_by = '25'
     facets = {}
+
+    # These fields will receive a single initial value, not a list
+    single_value_fields = {'date_time', 'date', 'integer', 'search', 'boolean'}
 
     # None or integer
     action_queryset_chunk_size = None
@@ -2305,12 +2444,11 @@ class FilteredArticlesListView(generic.ListView):
         context['paginate_by'] = params_querydict.get('paginate_by', self.paginate_by)
         facets = self.get_facets()
 
-        # Most initial values are in list form
-        # The exception is date_time facets
         initial = dict(params_querydict.lists())
+
         for keyword, value in initial.items():
             if keyword in facets:
-                if facets[keyword]['type'] == 'date_time':
+                if facets[keyword]['type'] in self.single_value_fields:
                     initial[keyword] = value[0]
 
         context['facet_form'] = forms.CBVFacetForm(
@@ -2330,6 +2468,8 @@ class FilteredArticlesListView(generic.ListView):
             'doi_manager_action_maximum_size',
             self.request.journal if self.request.journal else None,
         ).processed_value
+        context['order_by'] = params_querydict.get('order_by', self.get_order_by())
+        context['order_by_choices'] = self.get_order_by_choices()
         return context
 
     def get_queryset(self, params_querydict=None):
@@ -2340,6 +2480,9 @@ class FilteredArticlesListView(generic.ListView):
         params_querydict.pop('action_status', '')
         params_querydict.pop('action_error', False)
 
+        # Clear order_by, since it is handled separately
+        params_querydict.pop('order_by', '')
+
         self.queryset = super().get_queryset()
         q_stack = []
         facets = self.get_facets()
@@ -2349,44 +2492,64 @@ class FilteredArticlesListView(generic.ListView):
             # The following line prevents the user from passing any parameters
             # other than those specified in the facets.
             if keyword in facets and value_list:
-                if value_list[0]:
-                    predicates = [(keyword, value) for value in value_list]
-                elif facets[keyword]['type'] != 'date_time':
-                    if value_list[0] == '' and facets[keyword]['type'] != 'date_time':
-                        predicates = [(keyword, '')]
+                if facets[keyword]['type'] == 'search' and value_list[0]:
+                    self.queryset, _duplicates = search_model_admin(
+                        self.request,
+                        self.model,
+                        q=value_list[0],
+                        queryset=self.queryset,
+                    )
+                    predicates = []
+                elif facets[keyword]['type'] == 'boolean':
+                    if value_list[0]:
+                        predicates = [(keyword, True)]
                     else:
-                        predicates = [(keyword+'__isnull', True)]
+                        predicates = [(keyword, False)]
+                elif value_list[0]:
+                    predicates = [(keyword, value) for value in value_list]
                 else:
                     predicates = []
                 query = Q()
                 for predicate in predicates:
                     query |= Q(predicate)
                 q_stack.append(query)
-        return self.order_queryset(
-            self.filter_queryset_if_journal(
-                self.queryset.filter(*q_stack)
-            )
-        ).exclude(
-            stage=submission_models.STAGE_UNSUBMITTED,
+        self.queryset = self.filter_queryset_if_journal(
+            self.queryset.filter(*q_stack)
         )
+        return self.order_queryset(self.queryset)
 
     def order_queryset(self, queryset):
-        return queryset.order_by('title')
+        order_by = self.get_order_by()
+        if order_by:
+            return queryset.order_by(order_by)
+        else:
+            return queryset
+
+    def get_order_by(self):
+        order_by = self.request.GET.get('order_by', '')
+        order_by_choices = self.get_order_by_choices()
+        return order_by if order_by in dict(order_by_choices) else ''
+
+    def get_order_by_choices(self):
+        """ Subclass must implement to allow ordering result set
+        :return: A list of 2-item tuples compatible with Django choices
+            eg: [("choice_a", "Choice A"), ("choice_b", "Choice B")]
+        """
+        return []
 
     def get_facets(self):
+        """ Subclass must implement to declare available facets"""
         facets = {}
         return self.filter_facets_if_journal(facets)
 
     def get_facet_queryset(self):
         # The default behavior is for the facets to stay the same
         # when a filter is chosen.
-        # To make them change dynamically, return None 
+        # To make them change dynamically, return None
         # instead of a separate facet.
         # return None
         queryset = self.filter_queryset_if_journal(
             super().get_queryset()
-        ).exclude(
-            stage=submission_models.STAGE_UNSUBMITTED
         )
         facets = self.get_facets()
         for facet in facets.values():
@@ -2413,7 +2576,7 @@ class FilteredArticlesListView(generic.ListView):
 
             if request.journal:
                 querysets.extend(self.split_up_queryset_if_needed(queryset))
-            else:
+            elif hasattr(self.model, 'journal'):
                 for journal in journal_models.Journal.objects.all():
                     journal_queryset = queryset.filter(journal=journal)
                     if journal_queryset:
@@ -2443,9 +2606,8 @@ class FilteredArticlesListView(generic.ListView):
         else:
             return [queryset]
 
-
     def filter_queryset_if_journal(self, queryset):
-        if self.request.journal:
+        if self.request.journal and hasattr(self.model, 'journal'):
             return queryset.filter(journal=self.request.journal)
         else:
             return queryset
@@ -2456,3 +2618,18 @@ class FilteredArticlesListView(generic.ListView):
             return facets
         else:
             return facets
+
+
+class FilteredArticlesListView(GenericFacetedListView):
+    """
+    Deprecated. Former base class for article list views.
+    """
+
+    model = submission_models.Article
+    template_name = 'core/manager/article_list.html'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        raise DeprecationWarning(
+            'This view is deprecated. Use GenericFacetedListView instead.'
+        )

@@ -8,7 +8,7 @@
 {% block breadcrumbs %}
     {{ block.super }}
     <li><a href="{% url 'core_manager_index' %}">Manager</a></li>
-    <li><a href="{% url 'core_manager_news' %}">News Manager</a></li>
+    <li>News Manager</li>
 {% endblock %}
 
 {% block body %}
@@ -57,12 +57,11 @@
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     {{ form.title|foundation }}
-                    {{ form.body|safe }}
+                    {{ form.body|foundation }}
                     {{ form.start_display|foundation }}
                     {{ form.end_display|foundation }}
                     {{ form.sequence|foundation }}
                     {{ form.image_file|foundation }}
-                    {{ form.custom_byline|foundation }}
 
                     {% if not action == 'new' and news_item.large_image_file %}
                         <p>Existing image: {{ news_item.large_image_file }} -
@@ -71,6 +70,10 @@
                             </button>
                         </p>
                     {% endif %}
+
+                    {{ form.custom_byline|foundation }}
+                    {{ form.pinned|foundation }}
+
                     <div class="row">
                         <div class="large-12 columns">
                             <label for="id_tags">Tags</label>
@@ -81,6 +84,12 @@
                             <button class="success button" type="submit">{% if action == 'new' %}Add Item{% else %}
                                 Update
                                 Item{% endif %}</button>
+                            {% if news_item.history %}
+                                <a class="button" data-open="history_modal">
+                                    <i class="fa fa-history" aria-hidden="True"></i>
+                                    View History
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </form>
@@ -88,11 +97,10 @@
         </div>
 
     </div>
+    {% include 'admin/elements/history_modal.html' with obj=news_item view_url="admin:comms_newsitem_history" %}
 {% endblock body %}
 
 {% block js %}
-    {% include "elements/datepicker.html" with target="#id_start_display" %}
-    {% include "elements/datepicker.html" with target="#id_end_display" %}
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">
     <script type="text/javascript" src="{% static "common/js/jq-ui.min.js" %}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tag-it/2.0/js/tag-it.js"></script>

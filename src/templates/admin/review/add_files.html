@@ -3,11 +3,11 @@
 
 {% block title %}Add Review Files{% endblock title %}
 {% block title-section %}Add Files{% endblock %}
-{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.title }}{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
-    {% include "elements/breadcrumbs/review_base.html" %}
+    {% include "elements/breadcrumbs/review_base.html" with subpage="yes" %}
     <li>Add Files</li>
 {% endblock breadcrumbs %}
 

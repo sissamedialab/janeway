@@ -4,11 +4,11 @@
 {% block title %}Editor Review Copyedit{% endblock %}
 {% block title-section %}Review Copyedit Assignment #{{ copyedit.id }} by
     {{ copyedit.copyeditor.full_name }}{% endblock %}
-{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.title }}{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
-    {% include "elements/breadcrumbs/copyediting_base.html" %}
+    {% include "elements/breadcrumbs/copyediting_base.html" with subpage="yes" %}
     <li>Review Copyediting</li>
 {% endblock breadcrumbs %}
 
@@ -126,8 +126,10 @@
                                 </tr>
                             {% endfor %}
                         </table>
-                        <h5>Covering Letter from Author</h5>
-                        <blockquote>{{ review.author_note|safe }}</blockquote>
+                        <div class="title-area">
+                            <h2>Covering Letter from Author</h2>
+                        </div>
+                        {{ review.author_note|safe }}
                         {% if not forloop.last %}
                         <hr />
                         {% endif %}
@@ -236,7 +238,7 @@
                     {% csrf_token %}
                     <textarea name="reset_note">{{ reopen_message|safe|linebreaksbr }}</textarea>
                     <label for="due">Due Date</label>
-                    <input type="text" name="due" id="due" required="required">
+                    <input type="date" name="due" id="due" required="required">
                     <button name="review" type="submit" class="button success"><i class="fa fa-envelope-o">&nbsp;</i>Send
                     </button>
                 </form>
@@ -258,5 +260,4 @@
         {% include "admin/elements/open_modal.html" with target=author_review_form.modal.id %}
     {% endif %}
     {% include "elements/jqte.html" %}
-    {% include "elements/datepicker.html" with target='#due' %}
 {% endblock js %}

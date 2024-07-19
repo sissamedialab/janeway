@@ -5,7 +5,6 @@ __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 from bs4 import BeautifulSoup
 import csv
-from dateutil import parser as dateparser
 import os
 from os import listdir, makedirs
 from os.path import isfile, join
@@ -13,6 +12,7 @@ import requests
 from shutil import copyfile
 from urllib.parse import urlencode
 from uuid import uuid4
+import warnings
 
 from django.contrib import messages
 from django.conf import settings
@@ -21,7 +21,6 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.template.loader import get_template
 from django.core.validators import validate_email, ValidationError
-from django.utils.timezone import make_aware
 
 from core import models as core_models, files
 from journal import models as journal_models, issue_forms
@@ -85,6 +84,11 @@ def list_scss(journal):
 def create_galley_from_file(file_object, article_object, owner=None):
     # we copy the file here so that the user submitting has no control over the typeset files
     # N.B. os.path.splitext[1] always returns the final file extension, even in a multi-dotted (.txt.html etc.) input
+
+    warnings.warn(
+        "'create_galley_from_file' is deprecated and will be removed,"
+        " use production.logic.save_galley instead."
+        )
     new_filename = str(uuid4()) + str(os.path.splitext(file_object.uuid_filename)[1])
     folder_structure = os.path.join(settings.BASE_DIR, 'files', 'articles', str(article_object.id))
 
@@ -244,42 +248,65 @@ def handle_unassign_issue(request, article, issues):
         messages.add_message(request, messages.WARNING, 'Issue does not exist.')
 
 
-def handle_set_pubdate(request, article):
-    date = request.POST.get('date')
-    time = request.POST.get('time')
+def get_initial_for_prepub_notifications(request, article):
+    author_initial = {}
+    author_initial['to'] = article.correspondence_author.email
+    cc = [au.email for au in article.non_correspondence_authors()]
+    notify_section_editors = request.journal.get_setting(
+        'general',
+        'notify_section_editors_of_publication',
+    )
+    if notify_section_editors:
+        cc.extend([ed.email for ed in article.section_editors()])
+    author_initial['cc'] = ','.join(cc)
 
-    date_time_str = "{0} {1}".format(date, time)
+    notify_peer_reviewers = request.journal.get_setting(
+        'general',
+        'notify_peer_reviewers_of_publication',
+    )
 
-    try:
-        date_time = dateparser.parse(date_time_str)
-        article.date_published = make_aware(date_time)
-        article.fixedpubcheckitems.set_pub_date = True
-        article.fixedpubcheckitems.save()
-        article.save()
-
-        messages.add_message(
-            request, messages.SUCCESS,
-            'Publication Date set to {0}'.format(article.date_published)
+    if not notify_peer_reviewers:
+        return [author_initial]
+    else:
+        peer_reviewer_initial = {}
+        custom_reply_to = request.journal.get_setting(
+            'general',
+            'replyto_address'
         )
-
-        return [date_time, []]
-    except ValueError:
-        return [date_time_str, ['Not a recognised Date/Time format. Date: 2016-12-16, Time: 20:20.']]
-
-
-def get_notify_author_text(request, article):
-    context = {
-        'article': article,
-    }
-
-    return render_template.get_message_content(request, context, 'author_publication')
+        peer_reviewer_initial['to'] = custom_reply_to or request.user.email
+        reviewer_emails = article.peer_reviewers(emails=True, completed=True)
+        peer_reviewer_initial['bcc'] = ','.join(reviewer_emails)
+        return [author_initial, peer_reviewer_initial]
 
 
-def notify_author(request, article):
+def handle_prepub_notifications(request, article, formset):
     kwargs = {
         'request': request,
         'article': article,
-        'user_message': request.POST.get('notify_author_email', 'No message from Editor.'),
+        'formset': formset,
+    }
+
+    event_logic.Events.raise_event(
+        event_logic.Events.ON_PREPUB_NOTIFICATIONS,
+        task_object=article,
+        **kwargs,
+    )
+    article.fixedpubcheckitems.send_notifications = True
+    article.fixedpubcheckitems.save()
+    messages.add_message(
+        request,
+        messages.SUCCESS,
+        'Notifications sent.'
+    )
+
+
+def notify_author(request, article):
+    """ Note: This function is deprecated. Use handle_prepub_notifications instead.
+    """
+    kwargs = {
+        'request': request,
+        'article': article,
+        'user_message': request.POST.get('email_to_author', 'No message from Editor.'),
         'section_editors': request.POST.get('section_editors', False),
         'peer_reviewers': request.POST.get('peer_reviewers', False),
     }
@@ -543,6 +570,29 @@ def resend_email(article, log_entry, request, form):
     notify_helpers.send_email_with_body_from_user(request, subject, valid_email_addresses, message, log_dict=log_dict)
 
 
+def send_email(user, form, request, article):
+    subject = form.cleaned_data['subject']
+    message = form.cleaned_data['body']
+
+    log_dict = {
+        'level': 'Info',
+        'action_text': 'Contact User',
+        'types': 'Email',
+        'target': article if article else user
+    }
+
+    notify_helpers.send_email_with_body_from_user(
+        request,
+        subject,
+        user.email,
+        message,
+        log_dict=log_dict,
+        cc=form.cleaned_data['cc'],
+        bcc=form.cleaned_data['bcc'],
+        attachment=form.cleaned_data['attachments'],
+    )
+
+
 def get_table_from_html(table_name, content):
     """
     Uses BS4 to fetch an HTML table.
@@ -566,9 +616,19 @@ def get_all_tables_from_html(content):
     tables = []
 
     for table in soup.findAll('div', attrs={'class': 'table-expansion'}):
+        original_id = table.get("id")
+        if original_id:
+            table["id"] = "copy-of-" + original_id
+        for child in table.descendants:
+            # try / except because .decendants sometimes returns a string, sometimes an object
+            try:
+                if child.get("id"):
+                    child["id"] = "copy-of-" + child["id"]
+            except AttributeError:
+                pass
         tables.append(
             {
-                'id': table.get('id'),
+                'id': original_id,
                 'content': str(table)
             }
         )

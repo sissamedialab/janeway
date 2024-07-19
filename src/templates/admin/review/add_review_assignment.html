@@ -2,11 +2,11 @@
 {% load foundation %}
 {% block title %}Add Review Assignment{% endblock title %}
 {% block title-section %}Add Review Assignment{% endblock %}
-{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.title }}{% endblock %}
+{% block title-sub %}#{{ article.pk }} / {{ article.correspondence_author.last_name }} / {{ article.safe_title }}{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
-    {% include "elements/breadcrumbs/review_base.html" %}
+    {% include "elements/breadcrumbs/review_base.html" with subpage="yes" %}
     <li>Add Review Assignment</li>
 {% endblock breadcrumbs %}
 
@@ -18,18 +18,33 @@
             <div class="box">
                 <div class="title-area">
                     <h2>1. Select Reviewer</h2>
-
                         <a href="{% if journal_settings.general.enable_one_click_access %}#{% else %}{% url 'core_add_user' %}?role=reviewer&return={{ request.path }}{% endif %}" class="button" data-open="reviewer"><i class="fa fa-plus">&nbsp;</i>Add New Reviewer</a>
                         <a href="{% url 'core_manager_enrol_users' %}" class="button" target="_blank"><i class="fa fa-users">&nbsp;</i>Enroll Existing User</a>
                 </div>
                 <div class="content">
+                    <div class="callout primary">
+                        <p> <span class="fa fa-info-circle"></span>
+                            {% blocktrans %}
+                                You can select a reviewer using the radio
+                                buttons in the first column and complete the
+                                section under 'Set Options'.
+                                If you cannot find the reviewer you want in
+                                this list you can use 'Enroll Existing User' to
+                                search the database and give users the Reviewer
+                                role, or 'Add New Reviewer' to create a new
+                                account for a reviewer (this process is silent,
+                                so they will not receive an account creation
+                                email).
+                            {% endblocktrans %}
+                        </p>
+                        <p>
+                            Reviewers who have completed a review for this
+                            article in a previous round will appear at the top
+                            of this list and will show 'Yes' in the 'Has
+                            Reviewed Article' column.
+                        </p>
+                    </div>
 
-                    <p>
-                        {% blocktrans %}
-                        You can select a reviewer using the radio buttons in the first column and complete the section under "Set Options".
-                        If you cannot find the reviewer you want in this list you can use "Enroll Existing User" to search the database and give users the Reviewer role, or "Add New Reviewer" to create a new account for a reviewer (this process is silent, they will not receive an account creation email).
-                        {% endblocktrans %}
-                    </p>
                     <table class="small scroll" id="reviewers">
                         <thead>
                         <tr>
@@ -40,42 +55,19 @@
                             <th width="30%">Interests</th>
                             <th>Average Score</th>
                             <th>Last Review Completed</th>
+                            <th>Has Reviewed Article</th>
+                            {% if journal_settings.general.enable_suggested_reviewers %}<th>Suggested Reviewer</th>{% endif %}
                         </tr>
                         </thead>
 
                         <tbody>
-                        {% for reviewer in suggested_reviewers %}
-                            <tr style="color: forestgreen">
-                                <td><input type="radio" name="reviewer" value="{{ reviewer.id }}" {% if reviewer.id == form.cleaned_data.reviewer.pk %}checked=True{% endif %}></td>
-                                <td>{{ reviewer.full_name }}</td>
-                                <td>{{ reviewer.email }}</td>
-                                <td>{{ reviewer.active_reviews_count|default_if_none:0 }}</td>
-                                <td>{% for interest in reviewer.interest.all %}{{ interest.name }}
-                                    {% if not forloop.last %}, {% endif %}{% endfor %}</td>
-                                <td>{{ reviewer.rating_average|default_if_none:"" }}</td>
-                                <td>{{ reviewer.reviewer.all.0.date_complete }}</td>
-                            </tr>
-                        {% endfor %}
                         {% for reviewer in reviewers %}
-                            {% if not journal_settings.general.enable_suggested_reviewers or not reviewer in suggested_reviewers %}
                             <tr>
-                                <td><input type="radio" name="reviewer" value="{{ reviewer.id }}" {% if reviewer.id == form.cleaned_data.reviewer.pk %}checked=True{% endif %}></td>
-                                <td>{{ reviewer.full_name }}</td>
-                                <td>{{ reviewer.email }}</td>
-                                <td>{{ reviewer.active_reviews_count|default_if_none:0 }}</td>
-                                <td>{% for interest in reviewer.interest.all %}{{ interest.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
-                                <td>{{ reviewer.rating_average|default_if_none:"" }}</td>
-                                <td>{{ reviewer.reviewer.all.0.date_complete }}</td>
+                                {% include "admin/elements/review/add_reviewer_table_row.html" with reviewer=reviewer %}
                             </tr>
-                            {% endif %}
                         {% empty %}
                             <tr>
-                                <td>No suitable reviewers.</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
+                                <td colspan="10">No suitable reviewers.</td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -126,49 +118,6 @@
     </div>
     {% endif %}
 
-    <div class="reveal large" id="enroll" data-reveal data-animation-in="slide-in-up"
-     data-animation-out="slide-out-down">
-        <div class="card">
-            <div class="card-divider">
-                <h4><i class="fa fa-users">&nbsp;</i>Enroll Existing User as Reviewer</h4>
-            </div>
-            <div class="card-section">
-                <button class="close-button" data-close aria-label="Close reveal" type="button">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <div class="content">
-                    <form method="POST">
-                        {% include "elements/forms/errors.html" with form=new_reviewer_form %}
-                        {% csrf_token %}
-                        <table class="small scroll" id="enrolluser">
-                            <thead>
-                            <tr>
-                                <th>Select</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Email Address</th>
-                                <th>Interests</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for user in user_list %}
-                                <tr>
-                                    <td><input type="checkbox" name="user_id" value="{{ user.pk }}"></td>
-                                    <td>{{ user.first_name }}</td>
-                                    <td>{{ user.last_name }}</td>
-                                    <td>{{ user.email }}</td>
-                                    <td>{{ user.interests.all }}</td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                        <button type="submit" class="button success" name="enrollusers" id="enrollusers">Enroll as Reviewer</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {% if form.modal %}
         {% include "admin/elements/confirm_modal.html" with modal=form.modal form_id="review_assignment_form" %}
     {% endif %}
@@ -176,12 +125,14 @@
 {% endblock body %}
 
 {% block js %}
-    {% include "elements/datatables.html" with target="#reviewers" %}
-    {% include "elements/datepicker.html" with target="#id_date_due" %}
+    {% if journal_settings.general.enable_suggested_reviewers %}
+        {% include "elements/datatables.html" with target="#reviewers" sort_list="[7, 'desc'], [8, 'desc']" %}
+    {% else %}
+        {% include "elements/datatables.html" with target="#reviewers" sort_list="[7, 'desc']" %}
+    {% endif %}
     {% if form.modal %}
         {% include "admin/elements/open_modal.html" with target=form.modal.id %}
     {% endif %}
-    {% include "elements/datatables.html" with target="#enrolluser" %}
 
     <script lang="javascript">
     function getQueryStrings()
