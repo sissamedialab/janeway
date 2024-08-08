@@ -15,6 +15,22 @@ include:
     file: '.gitlab-ci-pkg-deploy.yml'
 
 
+deploy_to_test:
+  extends:
+    - .deploy
+  tags:
+    - inasset
+  variables:
+    SERVER_IP: "$TEST_SERVER_IP"
+    SERVER_USER: "$TEST_SERVER_USER"
+    DEPLOY_CMD: "deploy-test-janeway"
+  environment:
+    name: development
+    url: https://wjs-test-test-journals.wjapp.it/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+
+
 deploy_to_dev:
   extends:
     - .deploy
@@ -26,10 +42,10 @@ deploy_to_dev:
     DEPLOY_CMD: "deploy-dev-janeway"
   environment:
     name: development
-    url: https://serra-dev-journals.wjapp.it/
+    url: https://wjs-test-dev-journals.wjapp.it/
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
-
+  when: manual
 
 deploy_to_pp:
   extends:
@@ -42,7 +58,7 @@ deploy_to_pp:
     DEPLOY_CMD: "deploy-pp-janeway"
   environment:
     name: pre-production
-    url: https://serra-pp-journals.wjapp.it/
+    url: https://wjs-test-pp-journals.wjapp.it/
   when: manual
 
 
