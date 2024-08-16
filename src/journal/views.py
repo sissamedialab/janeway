@@ -1334,8 +1334,8 @@ def manage_issues(request, issue_id=None, event=None):
         else:
             modal = None
     else:
-        issue, modal, form, galley_form, sort_form = None, None, issue_forms.NewIssue(
-            journal=request.journal), None, None
+        issue, modal, form, galley_form, sort_form, galleys, documents = None, None, issue_forms.NewIssue(
+            journal=request.journal), None, None, [], []
 
     if request.POST:
         if 'make_current' in request.POST:
@@ -1386,13 +1386,13 @@ def manage_issues(request, issue_id=None, event=None):
                 modal = 'issue'
 
     template = 'journal/manage/issues.html'
-    try:
-        galleys = [issue.galley.file]
-    except (IssueGalley.DoesNotExist, AttributeError):
-        # possible cases here:
-        # - issue is None
-        # - issue has no galley
-        galleys = []
+    if issue:
+        try:
+            galleys = [issue.galley.file]
+        except IssueGalley.DoesNotExist:
+            galleys = []
+        documents = list(issue.documents.all())
+
     context = {
         'issues': issue_list if not issue else [issue],
         'issue': issue,
@@ -1400,7 +1400,7 @@ def manage_issues(request, issue_id=None, event=None):
         'modal': modal,
         'galley_form': galley_form,
         'galleys': galleys,
-        'documents': list(issue.documents.all()),
+        'documents': documents,
         'articles': issue.get_sorted_articles(published_only=False) if issue else None,
         'sort_form': sort_form,
     }
