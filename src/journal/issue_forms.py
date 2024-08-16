@@ -11,7 +11,15 @@ from submission.models import Section
 
 
 class NewIssue(forms.ModelForm):
-    date_open = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), required=False)
+    date_open = forms.DateTimeField(
+        widget=forms.DateTimeInput(
+            attrs={
+                'type': 'datetime-local',
+                'format': '%Y-%m-%d %H:%M',
+            },
+        ),
+        required=False,
+    )
     date_close = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}), required=False)
 
     def __init__(self, *args, **kwargs):
