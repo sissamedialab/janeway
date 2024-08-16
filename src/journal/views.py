@@ -1388,7 +1388,10 @@ def manage_issues(request, issue_id=None, event=None):
     template = 'journal/manage/issues.html'
     try:
         galleys = [issue.galley.file]
-    except IssueGalley.DoesNotExist:
+    except (IssueGalley.DoesNotExist, AttributeError):
+        # possible cases here:
+        # - issue is None
+        # - issue has no galley
         galleys = []
     context = {
         'issues': issue_list if not issue else [issue],
