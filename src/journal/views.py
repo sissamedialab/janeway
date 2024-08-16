@@ -1393,6 +1393,12 @@ def manage_issues(request, issue_id=None, event=None):
         # - issue is None
         # - issue has no galley
         galleys = []
+    try:
+        list(issue.documents.all()),
+    except AttributeError:
+        # possible cases here:
+        # - issue is None
+        documents = []
     context = {
         'issues': issue_list if not issue else [issue],
         'issue': issue,
@@ -1400,7 +1406,7 @@ def manage_issues(request, issue_id=None, event=None):
         'modal': modal,
         'galley_form': galley_form,
         'galleys': galleys,
-        'documents': list(issue.documents.all()),
+        'documents': documents,
         'articles': issue.get_sorted_articles(published_only=False) if issue else None,
         'sort_form': sort_form,
     }
