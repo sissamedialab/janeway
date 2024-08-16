@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("submission", "0080_migrate_submission_steps"),
-        ("core", "0096_update_review_ack_email"),
+        ("core", "0095_merge_20240621_0722"),
         ("journal", "0065_prepub_send_notifications"),
     ]
 
