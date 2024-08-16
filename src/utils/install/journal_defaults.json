@@ -351,7 +351,7 @@
             "type": "rich-text"
         },
         "value": {
-            "default": "Dear {{ review_assignment.editor.full_name }}, <br/><br/>This is a notification that the reviewer status on \"{{ article.safe_title }}\" in {{ article.journal.name }} has been updated.  You can view more information on the journal site: {{ review_in_review_url }}  <br/><br/>Regards,"
+            "default": "<p>Dear {{ review_assignment.editor.full_name }},</p><p>{{ review_assignment.reviewer.full_name }} has completed their review of \"{{ review_assignment.article.title }}\"{% if review_assignment.decision %} with this recommendation: {{ review_assignment.get_decision_display }}{% endif %}.</p><p>You can view more information on the journal site: {% journal_url 'review_view_review' review_assignment.article.pk review_assignment.pk %}</p><p>Regards,</p>"
         },
         "editable_by": [
             "editor",
@@ -2127,25 +2127,6 @@
     },
     {
         "group": {
-            "name": "email"
-        },
-        "setting": {
-            "description": "Send to a user specified in notification manager.",
-            "is_translatable": true,
-            "name": "notification_acceptance",
-            "pretty_name": "Acceptance Notification",
-            "type": "rich-text"
-        },
-        "value": {
-            "default": "<p>Dear {{ notification.user.full_name }},<br><br>This email is to notify you that article \"{{ article.safe_title }}\" with corresponding author&nbsp;{{ article.correspondence_author.full_name }} in {{ article.journal.name }} has been accepted for publication.</p>"
-        },
-        "editable_by": [
-            "editor",
-            "journal-manager"
-        ]
-    },
-    {
-        "group": {
             "name": "general"
         },
         "setting": {
@@ -2743,25 +2724,6 @@
             "is_translatable": true,
             "description": "Subject for Email sent when user registers.",
             "name": "subject_new_user_registration"
-        },
-        "group": {
-            "name": "email_subject"
-        },
-        "editable_by": [
-            "editor",
-            "journal-manager"
-        ]
-    },
-    {
-        "value": {
-            "default": ""
-        },
-        "setting": {
-            "type": "char",
-            "pretty_name": "Acceptance Notification",
-            "is_translatable": true,
-            "description": "Subject for Send to a user specified in notification manager.",
-            "name": "subject_notification_acceptance"
         },
         "group": {
             "name": "email_subject"
@@ -5140,5 +5102,20 @@
             "editor",
             "journal-manager"
         ]
+    },
+    {
+        "group": {
+            "name": "styling"
+        },
+        "setting": {
+            "description": "When this setting is enabled, and a group member has their country set, the editorial team will display the group member's country.",
+            "is_translatable": false,
+            "name": "display_countries_editorial_team",
+            "pretty_name": "Display Country on Editorial Team Page",
+            "type": "boolean"
+        },
+        "value": {
+            "default": ""
+        }
     }
 ]

@@ -298,3 +298,32 @@ article .list-romanupper {
     padding: 15px;
     margin-top: 15px;
 }
+
+/* Styling for skip to main content link */
+.skip-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 0;
+    overflow: hidden;
+}
+
+.skip-to-content,
+.skip-to-nav {
+    position: absolute;
+    left: -999px;
+}
+
+.skip-to-content:focus,
+.skip-to-nav:focus {
+    position: relative;
+    left: 0;
+    margin-block-start: 10px;
+    margin-block-end: 10px;
+}
+
+.skip-container:focus-within {
+    height: auto;
+    overflow: visible;
+}
