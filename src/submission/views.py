@@ -72,6 +72,11 @@ def start(request, type=None):
             ).processed_value:
                 logic.add_user_as_author(request.user, new_article)
 
+            event_logic.Events.raise_event(
+                event_logic.Events.ON_ARTICLE_SUBMISSION_START,
+                **{'request': request, 'article': new_article}
+            )
+
             user_has_issues = Issue.objects.for_submission(user=request.user, journal=request.journal).exists()
             if user_has_issues:
                 return redirect(reverse('submit_issue', kwargs={'article_id': new_article.pk}))
