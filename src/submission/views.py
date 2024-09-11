@@ -588,6 +588,17 @@ def submit_files(request, article_id):
                 messages.WARNING,
                 _('File deleted'),
             )
+
+            event_logic.Events.raise_event(
+                event_logic.Events.ON_ARTICLE_FILE_DELETE,
+                **{
+                    'request': request,
+                    'file_id': file_id,
+                    'original_filename': file.original_filename,
+                    'article': article
+                }
+            )
+            
             return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
 
         if 'manuscript' in request.POST:
@@ -604,6 +615,18 @@ def submit_files(request, article_id):
                     new_file.label = form.cleaned_data['label']
                     new_file.description = form.cleaned_data['description']
                     new_file.save()
+
+                    event_logic.Events.raise_event(
+                        event_logic.Events.ON_ARTICLE_FILE_UPLOAD,
+                        **{
+                            'request': request,
+                            'file_id': new_file,
+                            'original_filename': new_file.original_filename,
+                            'file_type': 'manuscript',
+                            'article': article
+                        }
+                    )
+
                     return redirect(
                         reverse('submit_files', kwargs={'article_id': article_id}),
                     )
@@ -613,21 +636,34 @@ def submit_files(request, article_id):
                 modal = 'manuscript'
 
         if 'data' in request.POST:
-            for uploaded_file in request.FILES.getlist('file'):
-                form = forms.FileDetails(request.POST)
-                if form.is_valid():
-                    new_file = files.save_file_to_article(
-                        uploaded_file,
-                        article,
-                        request.user,
-                    )
-                    article.data_figure_files.add(new_file)
-                    new_file.label = form.cleaned_data['label']
-                    new_file.description = form.cleaned_data['description']
-                    new_file.save()
-                    return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
-                else:
-                    modal = 'data'
+            data_form = forms.FileDetails(request.POST)
+            uploaded_file = request.FILES.get('file')
+            if data_form.is_valid() and uploaded_file:
+                new_file = files.save_file_to_article(
+                    uploaded_file,
+                    article,
+                    request.user,
+                )
+                article.data_figure_files.add(new_file)
+                new_file.label = data_form.cleaned_data['label']
+                new_file.description = data_form.cleaned_data['description']
+                new_file.save()
+
+                event_logic.Events.raise_event(
+                    event_logic.Events.ON_ARTICLE_FILE_UPLOAD,
+                    **{
+                        'request': request,
+                        'file_id': new_file,
+                        'original_filename': new_file.original_filename,
+                        'file_type': 'data',
+                        'article': article
+                    }
+                )
+
+                return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
+            else:
+                data_form.add_error(None, 'You must select a file.')
+                modal = 'data'
 
         if 'next_step' in request.POST:
             if article.manuscript_files.all().count() >= 1:
