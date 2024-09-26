@@ -37,6 +37,19 @@ def get_submit_info_form(request):
     return import_string(form_path)
 
 
+def get_select_issue_form(request):
+    if request.user.is_editor(request):
+        custom_form = setting_handler.get_setting(
+            "general", "submit_select_issue_form_editor_version", request.journal
+        )
+    else:
+        custom_form = setting_handler.get_setting(
+            "general", "submit_select_issue_form_general_version", request.journal
+        )
+    form_path = custom_form.processed_value
+    return import_string(form_path)
+
+
 class PublisherNoteForm(forms.ModelForm):
 
     class Meta:
