@@ -5178,5 +5178,43 @@
             "editor",
             "journal-manager"
         ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Select Issue Form used during the submission phase for editors.",
+            "is_translatable": true,
+            "name": "submit_select_issue_form_editor_version",
+            "pretty_name": "General Publication Editor issue select form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.SelectIssueForm"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Select Issue Form used during the submission phase for authors.",
+            "is_translatable": true,
+            "name": "submit_select_issue_form_general_version",
+            "pretty_name": "General Publication issue select form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.SelectIssueForm"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
     }
 ]

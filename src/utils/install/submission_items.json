@@ -53,5 +53,15 @@
     "group": "general",
     "name": "submit_info_form_general_version",
     "title": "submission.forms.ArticleInfoSubmit"
+  },
+  {
+    "group": "general",
+    "name": "submit_select_issue_form_editor_version",
+    "title": "submission.forms.SelectIssueForm"
+  },
+  {
+    "group": "general",
+    "name": "submit_select_issue_form_general_version",
+    "title": "submission.forms.SelectIssueForm"
   }
 ]

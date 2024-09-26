@@ -1,0 +1,5 @@
+setting name,setting group,usage,value,verbosity,auto mark as read,auto mark as read by eo
+submit_select_issue_form_editor_version,general,,wjs.jcom_profile.forms.SelectSpecialIssueForm,,,
+submit_select_issue_form_general_version,general,,wjs.jcom_profile.forms.SelectSpecialIssueForm,,,
+submit_info_form_editor_version,general,,wjs.jcom_profile.forms.KeywordSelectionArticleInfoSubmit,,,
+submit_info_form_general_version,general,,wjs.jcom_profile.forms.KeywordSelectionArticleInfoSubmit,,,
