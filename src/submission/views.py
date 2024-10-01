@@ -14,6 +14,7 @@ from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 
 from core import files, models as core_models
 from journal.models import Issue
@@ -634,6 +635,7 @@ def submit_files(request, article_id):
                             reverse('submit_files', kwargs={'article_id': article_id}),
                         )
                     except Exception as e:
+                        modal = 'manuscript'
                         form.add_error(None, str(e))
                     
 
@@ -672,6 +674,7 @@ def submit_files(request, article_id):
 
                     return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
                 except Exception as e:
+                    modal = 'data'
                     data_form.add_error(None, str(e))
             data_form.add_error(None, 'You must select a file.')
             modal = 'data'
