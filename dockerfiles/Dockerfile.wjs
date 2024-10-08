@@ -24,5 +24,7 @@ RUN echo  "Installing Janeway requirements..." && \
     pip install -r /janeway/requirements.txt
 RUN echo "Cloning typesetting plugin at tag v1.6.0..." && \
     cd / && \
-    git clone --branch v1.6.0 --single-branch https://github.com/BirkbeckCTP/typesetting && \
+    git clone --branch v1.6.0 --single-branch --depth 3 https://github.com/openlibhums/typesetting.git && \
+    cd typesetting && \
+    git checkout 'v1.6.0^' && \
     ln -s /typesetting /janeway/src/plugins/
