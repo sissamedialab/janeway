@@ -72,6 +72,11 @@ def start(request, type=None):
             ).processed_value:
                 logic.add_user_as_author(request.user, new_article)
 
+            event_logic.Events.raise_event(
+                event_logic.Events.ON_ARTICLE_SUBMISSION_START,
+                **{'request': request, 'article': new_article}
+            )
+
             user_has_issues = Issue.objects.for_submission(user=request.user, journal=request.journal).exists()
             if user_has_issues:
                 return redirect(reverse('submit_issue', kwargs={'article_id': new_article.pk}))
@@ -103,9 +108,10 @@ def submit_issue(request, article_id):
     if not user_has_issues:
         return redirect(reverse('submit_info', kwargs={'article_id': article_id}))
     article = get_object_or_404(models.Article, pk=article_id)
+    issue_form = forms.get_select_issue_form(request)
 
     if request.POST:
-        form = forms.SelectIssueForm(journal=request.journal, user=request.user, data=request.POST, instance=article)
+        form = issue_form(journal=request.journal, user=request.user, data=request.POST, instance=article)
         if form.is_valid():
             article = form.save(commit=False)
             article.journal = request.journal
@@ -113,7 +119,7 @@ def submit_issue(request, article_id):
             article.save()
             return redirect(reverse('submit_info', kwargs={'article_id': article_id}))
     else:
-        form = forms.SelectIssueForm(journal=request.journal, user=request.user, instance=article)
+        form = issue_form(journal=request.journal, user=request.user, instance=article)
 
     template = 'admin/submission/submit_issue.html'
     context = {"form": form, "article": article}
@@ -166,7 +172,7 @@ def submit_funding(request, article_id):
 
     if request.POST:
         if 'next_step' in request.POST:
-            article.current_step = 5
+            article.current_step = 6
             article.save()
             return redirect(reverse('submit_review', kwargs={'article_id': article_id}))
 
@@ -221,10 +227,7 @@ def submit_info(request, article_id):
             request.journal,
         ).processed_value
 
-        # Determine the form to use depending on whether the user is an editor.
-        article_info_form = forms.ArticleInfoSubmit
-        if request.user.is_editor(request):
-            article_info_form = forms.EditorArticleInfoSubmit
+        article_info_form = forms.get_submit_info_form(request)
 
         form = article_info_form(
             instance=article,
@@ -769,8 +772,9 @@ def submit_review(request, article_id):
                 task_object=article,
                 **kwargs
             )
+            article.refresh_from_db()
 
-            return redirect(reverse('core_dashboard'))
+            return redirect(reverse('wjs_article_details', args=(article.articleworkflow.pk,)))
 
     template = "admin/submission//submit_review.html"
     context = {
