@@ -22,6 +22,7 @@ RUN echo "Cloning Janeway code ${BRANCH}..." && \
     git pull
 RUN echo  "Installing Janeway requirements..." && \
     pip install -r /janeway/requirements.txt
-RUN echo "Cloning typesetting plugin at tag v1.3.0-RC-1..." && \
-    cd / && git clone --branch master --single-branch https://github.com/BirkbeckCTP/typesetting && \
+RUN echo "Cloning typesetting plugin at tag v1.6.0..." && \
+    cd / && \
+    git clone --branch v1.6.0 --single-branch https://github.com/BirkbeckCTP/typesetting && \
     ln -s /typesetting /janeway/src/plugins/
