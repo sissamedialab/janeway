@@ -8,4 +8,5 @@ src/files/press
 src/files/temp
 src/files/xsl
 src/plugins/*
+src/media/*
 

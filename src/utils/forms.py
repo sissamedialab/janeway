@@ -71,7 +71,18 @@ class KeywordModelForm(ModelForm):
         if posted_keywords:
             keyword_list = posted_keywords.split(",")
             for i, keyword in enumerate(keyword_list):
-                obj, _ = submission_models.Keyword.objects.get_or_create(
+                # Ref: https://gitlab.sissamedialab.it/wjs/specs/-/issues/396
+                # FIXME: temporary workaround until we change the keyword selection widget to allow selecting keywords
+                # As the keyword is multi-lingual, we must turn off modeltranslation rewrite (ie: the ORM will match
+                # the default language) because when saving, the current language selected in the tab is activated on
+                # django and modeltranslation will try to get/create the keyword in the current language
+                # but the form contains the english version of the keyword
+                # eg: if spanish is activated with rewrite=True (default) the query is equivalent to
+                # - Keyword.objects.get_or_create(word_es=keyword) -> English version of the keyword is of course not
+                #   found
+                # if spanish is activated with rewrite=False the query is equivalent to
+                # - Keyword.objects.get_or_create(word_en=keyword) -> English version of the keyword is matched
+                obj, _ = submission_models.Keyword.objects.rewrite(False).get_or_create(
                     word=keyword)
                 instance.keywords.add(obj)
         if commit:

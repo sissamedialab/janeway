@@ -14,8 +14,10 @@ from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 
 from core import files, models as core_models
+from journal.models import Issue
 from repository import models as preprint_models
 from security.decorators import (
     article_edit_user_required,
@@ -75,12 +77,52 @@ def start(request, type=None):
                 **{'request': request, 'article': new_article}
             )
 
-            return redirect(reverse('submit_info', kwargs={'article_id': new_article.pk}))
+            user_has_issues = Issue.objects.for_submission(user=request.user, journal=request.journal).exists()
+            if user_has_issues:
+                return redirect(reverse('submit_issue', kwargs={'article_id': new_article.pk}))
+            else:
+                return redirect(reverse('submit_info', kwargs={'article_id': new_article.pk}))
 
     template = 'admin/submission/start.html'
     context = {
         'form': form
     }
+
+    return render(request, template, context)
+
+
+@login_required
+@decorators.submission_is_enabled
+@article_is_not_submitted
+@article_edit_user_required
+@submission_authorised
+def submit_issue(request, article_id):
+    """
+    Select primary issue for the article, if issue selection is active.
+
+    :param request: HttpRequest object
+    :param article_id: int, None or 'preprint'
+    :return: HttpRedirect or HttpResponse
+    """
+    user_has_issues = Issue.objects.for_submission(user=request.user, journal=request.journal).exists()
+    if not user_has_issues:
+        return redirect(reverse('submit_info', kwargs={'article_id': article_id}))
+    article = get_object_or_404(models.Article, pk=article_id)
+    issue_form = forms.get_select_issue_form(request)
+
+    if request.POST:
+        form = issue_form(journal=request.journal, user=request.user, data=request.POST, instance=article)
+        if form.is_valid():
+            article = form.save(commit=False)
+            article.journal = request.journal
+            article.current_step = 2
+            article.save()
+            return redirect(reverse('submit_info', kwargs={'article_id': article_id}))
+    else:
+        form = issue_form(journal=request.journal, user=request.user, instance=article)
+
+    template = 'admin/submission/submit_issue.html'
+    context = {"form": form, "article": article}
 
     return render(request, template, context)
 
@@ -130,7 +172,7 @@ def submit_funding(request, article_id):
 
     if request.POST:
         if 'next_step' in request.POST:
-            article.current_step = 5
+            article.current_step = 6
             article.save()
             return redirect(reverse('submit_review', kwargs={'article_id': article_id}))
 
@@ -185,10 +227,7 @@ def submit_info(request, article_id):
             request.journal,
         ).processed_value
 
-        # Determine the form to use depending on whether the user is an editor.
-        article_info_form = forms.ArticleInfoSubmit
-        if request.user.is_editor(request):
-            article_info_form = forms.EditorArticleInfoSubmit
+        article_info_form = forms.get_submit_info_form(request)
 
         form = article_info_form(
             instance=article,
@@ -204,10 +243,11 @@ def submit_info(request, article_id):
                 additional_fields=additional_fields,
                 submission_summary=submission_summary,
                 journal=request.journal,
+                keep_primary_issue=True
             )
             if form.is_valid():
                 form.save(request=request)
-                article.current_step = 2
+                article.current_step = 3
                 article.save()
 
                 return redirect(
@@ -263,7 +303,7 @@ def submit_authors(request, article_id):
         journal=request.journal,
     )
 
-    if article.current_step < 2 and not request.user.is_staff:
+    if article.current_step < 3 and not request.user.is_staff:
         return redirect(reverse('submit_info', kwargs={'article_id': article_id}))
 
     form = forms.AuthorForm()
@@ -356,7 +396,7 @@ def submit_authors(request, article_id):
         else:
             author = core_models.Account.objects.get(pk=correspondence_author)
             article.correspondence_author = author
-            article.current_step = 3
+            article.current_step = 4
             article.save()
 
             return redirect(reverse(
@@ -533,19 +573,10 @@ def submit_files(request, article_id):
         pk=article_id,
         journal=request.journal,
     )
-    ms_form = forms.FileDetails(
-        initial={
-            "label": article.journal.submissionconfiguration.submission_file_text,
-        },
-    )
-    data_form = forms.FileDetails(
-        initial={
-            "label": "Figure/Data File",
-        },
-    )
+    form = forms.FileDetails()
     configuration = request.journal.submissionconfiguration
 
-    if article.current_step < 3 and not request.user.is_staff:
+    if article.current_step < 4 and not request.user.is_staff:
         return redirect(reverse('submit_authors', kwargs={'article_id': article_id}))
 
     error, modal = None, None
@@ -553,33 +584,65 @@ def submit_files(request, article_id):
     if request.POST:
 
         if 'delete' in request.POST:
-            file_id = request.POST.get('delete')
-            file = get_object_or_404(core_models.File, pk=file_id, article_id=article.pk)
-            file.delete()
-            messages.add_message(
-                request,
-                messages.WARNING,
-                _('File deleted'),
-            )
+            with transaction.atomic():
+                file_id = request.POST.get('delete')
+                file = get_object_or_404(core_models.File, pk=file_id, article_id=article.pk)
+                file.delete()
+                messages.add_message(
+                    request,
+                    messages.WARNING,
+                    _('File deleted'),
+                )
+
+                event_logic.Events.raise_event(
+                    event_logic.Events.ON_ARTICLE_FILE_DELETE,
+                    **{
+                        'request': request,
+                        'file_id': file_id,
+                        'original_filename': file.original_filename,
+                        'article': article
+                    }
+                )
+            
             return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
 
         if 'manuscript' in request.POST:
-            ms_form = forms.FileDetails(request.POST)
+            form = forms.FileDetails(request.POST)
             uploaded_file = request.FILES.get('file')
-            if logic.check_file(uploaded_file, request, ms_form):
-                if ms_form.is_valid():
-                    new_file = files.save_file_to_article(
-                        uploaded_file,
-                        article,
-                        request.user,
-                    )
-                    article.manuscript_files.add(new_file)
-                    new_file.label = ms_form.cleaned_data['label']
-                    new_file.description = ms_form.cleaned_data['description']
-                    new_file.save()
-                    return redirect(
-                        reverse('submit_files', kwargs={'article_id': article_id}),
-                    )
+            if logic.check_file(uploaded_file, request, form):
+                if form.is_valid():
+                    try:
+                        with transaction.atomic():
+                            new_file = files.save_file_to_article(
+                                uploaded_file,
+                                article,
+                                request.user,
+                            )
+                            article.manuscript_files.add(new_file)
+                            new_file.label = form.cleaned_data['label']
+                            new_file.description = form.cleaned_data['description']
+                            new_file.save()
+
+                            event_logic.Events.raise_event(
+                                event_logic.Events.ON_ARTICLE_FILE_UPLOAD,
+                                **{
+                                    'request': request,
+                                    'file_id': new_file,
+                                    'original_filename': new_file.original_filename,
+                                    'file_type': 'manuscript',
+                                    'article': article
+                                }
+                            )
+
+                        return redirect(
+                            reverse('submit_files', kwargs={'article_id': article_id}),
+                        )
+                    except Exception as e:
+                        modal = 'manuscript'
+                        form.add_error(None, str(e))
+                    
+
+
                 else:
                     modal = 'manuscript'
             else:
@@ -589,23 +652,39 @@ def submit_files(request, article_id):
             data_form = forms.FileDetails(request.POST)
             uploaded_file = request.FILES.get('file')
             if data_form.is_valid() and uploaded_file:
-                new_file = files.save_file_to_article(
-                    uploaded_file,
-                    article,
-                    request.user,
-                )
-                article.data_figure_files.add(new_file)
-                new_file.label = data_form.cleaned_data['label']
-                new_file.description = data_form.cleaned_data['description']
-                new_file.save()
-                return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
-            else:
-                data_form.add_error(None, 'You must select a file.')
-                modal = 'data'
+                try:
+                    with transaction.atomic():
+                        new_file = files.save_file_to_article(
+                            uploaded_file,
+                            article,
+                            request.user,
+                        )
+                        article.data_figure_files.add(new_file)
+                        new_file.label = data_form.cleaned_data['label']
+                        new_file.description = data_form.cleaned_data['description']
+                        new_file.save()
+
+                        event_logic.Events.raise_event(
+                            event_logic.Events.ON_ARTICLE_FILE_UPLOAD,
+                            **{
+                                'request': request,
+                                'file_id': new_file,
+                                'original_filename': new_file.original_filename,
+                                'file_type': 'data',
+                                'article': article
+                            }
+                        )
+
+                    return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
+                except Exception as e:
+                    modal = 'data'
+                    data_form.add_error(None, str(e))
+            data_form.add_error(None, 'You must select a file.')
+            modal = 'data'
 
         if 'next_step' in request.POST:
             if article.manuscript_files.all().count() >= 1:
-                article.current_step = 4
+                article.current_step = 5
                 article.save()
                 if configuration.funding:
                     return redirect(reverse(
@@ -621,8 +700,7 @@ def submit_files(request, article_id):
     context = {
         'article': article,
         'error': error,
-        'ms_form': ms_form,
-        'data_form': data_form,
+        'form': form,
         'modal': modal,
     }
 
@@ -647,7 +725,7 @@ def submit_review(request, article_id):
         journal=request.journal,
     )
 
-    if article.current_step < 4 and not request.user.is_staff:
+    if article.current_step < 5 and not request.user.is_staff:
         return redirect(
             reverse(
                 'submit_info',
@@ -667,7 +745,7 @@ def submit_review(request, article_id):
             form.save()
             article.date_submitted = timezone.now()
             article.stage = models.STAGE_UNASSIGNED
-            article.current_step = 5
+            article.current_step = 6
             article.snapshot_authors(article)
             article.save()
 
@@ -694,8 +772,9 @@ def submit_review(request, article_id):
                 task_object=article,
                 **kwargs
             )
+            article.refresh_from_db()
 
-            return redirect(reverse('core_dashboard'))
+            return redirect(reverse('wjs_article_details', args=(article.articleworkflow.pk,)))
 
     template = "admin/submission//submit_review.html"
     context = {

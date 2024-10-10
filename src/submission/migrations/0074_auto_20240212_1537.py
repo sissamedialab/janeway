@@ -10,34 +10,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='submissionconfiguration',
-            name='submission_file_text_cy',
-            field=models.CharField(default='Manuscript File', help_text='During submission the author will be asked to upload a filethat is considered the main text of the article. You can usethis field to change the label for that file in submission.', max_length=255, null=True),
-        ),
-        migrations.AddField(
-            model_name='submissionconfiguration',
-            name='submission_file_text_de',
-            field=models.CharField(default='Manuscript File', help_text='During submission the author will be asked to upload a filethat is considered the main text of the article. You can usethis field to change the label for that file in submission.', max_length=255, null=True),
-        ),
-        migrations.AddField(
-            model_name='submissionconfiguration',
-            name='submission_file_text_en',
-            field=models.CharField(default='Manuscript File', help_text='During submission the author will be asked to upload a filethat is considered the main text of the article. You can usethis field to change the label for that file in submission.', max_length=255, null=True),
-        ),
-        migrations.AddField(
-            model_name='submissionconfiguration',
-            name='submission_file_text_en_us',
-            field=models.CharField(default='Manuscript File', help_text='During submission the author will be asked to upload a filethat is considered the main text of the article. You can usethis field to change the label for that file in submission.', max_length=255, null=True),
-        ),
-        migrations.AddField(
-            model_name='submissionconfiguration',
-            name='submission_file_text_fr',
-            field=models.CharField(default='Manuscript File', help_text='During submission the author will be asked to upload a filethat is considered the main text of the article. You can usethis field to change the label for that file in submission.', max_length=255, null=True),
-        ),
-        migrations.AddField(
-            model_name='submissionconfiguration',
-            name='submission_file_text_nl',
-            field=models.CharField(default='Manuscript File', help_text='During submission the author will be asked to upload a filethat is considered the main text of the article. You can usethis field to change the label for that file in submission.', max_length=255, null=True),
-        ),
     ]

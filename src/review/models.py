@@ -36,6 +36,7 @@ def all_review_decisions():
         (RD.DECISION_MAJOR.value, 'Major Revisions Required'),
         (RD.DECISION_REJECT.value, 'Reject'),
         (RD.DECISION_NO_RECOMMENDATION.value, 'No Recommendation'),
+        (RD.DECISION_WITHDRAWN.value, 'Withdrawn'),
     )
 
 
@@ -334,6 +335,12 @@ class ReviewAssignment(models.Model):
             return _("available for the author to access")
         return _("not available for the author to access")
 
+    def withdraw(self):
+        self.date_complete = timezone.now()
+        self.decision = RD.DECISION_WITHDRAWN.value
+        self.is_complete = True
+        self.save()
+
     def __str__(self):
         if self.reviewer:
             reviewer_name = self.reviewer.full_name()
@@ -530,6 +537,8 @@ def revision_type():
     return (
         (ED.MINOR_REVISIONS.value, 'Minor Revisions'),
         (ED.MAJOR_REVISIONS.value, 'Major Revisions'),
+        (ED.TECHNICAL_REVISIONS.value, 'Technical Revisions'),
+        (ED.OPEN_APPEAL.value, 'Open Appeal'),
     )
 
 
