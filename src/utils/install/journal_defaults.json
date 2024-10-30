@@ -5235,5 +5235,43 @@
             "editor",
             "journal-manager"
         ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Submit Review Form used during the submission phase.",
+            "is_translatable": true,
+            "name": "submit_submit_review_form_general_version",
+            "pretty_name": "General Submit Review form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.SubmissionCommentsForm"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Submit Start Form used during the submission phase.",
+            "is_translatable": true,
+            "name": "submit_submit_start_form_general_version",
+            "pretty_name": "General Submit Start, form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.ArticleStart"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
     }
 ]

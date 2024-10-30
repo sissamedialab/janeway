@@ -50,6 +50,22 @@ def get_select_issue_form(request):
     return import_string(form_path)
 
 
+def get_submit_review_form(request):
+    custom_form = setting_handler.get_setting(
+        "general", "submit_submit_review_form_general_version", request.journal
+    )
+    form_path = custom_form.processed_value
+    return import_string(form_path)
+
+
+def get_submit_start_form(request):
+    custom_form = setting_handler.get_setting(
+        "general", "submit_submit_start_form_general_version", request.journal
+    )
+    form_path = custom_form.processed_value
+    return import_string(form_path)
+
+
 class PublisherNoteForm(forms.ModelForm):
 
     class Meta:

@@ -46,13 +46,14 @@ def start(request, type=None):
     :param type: string, None or 'preprint'
     :return: HttpRedirect or HttpResponse
     """
-    form = forms.ArticleStart(journal=request.journal)
+    ArticleStart = forms.get_submit_start_form(request)
+    form = ArticleStart(journal=request.journal)
 
     if not request.user.is_author(request):
         request.user.add_account_role('author', request.journal)
 
     if request.POST:
-        form = forms.ArticleStart(request.POST, journal=request.journal)
+        form = ArticleStart(request.POST, journal=request.journal)
 
         if form.is_valid():
             new_article = form.save(commit=False)
@@ -732,12 +733,13 @@ def submit_review(request, article_id):
                 kwargs={'article_id': article_id},
             )
         )
-    form = forms.SubmissionCommentsForm(
+    SubmissionCommentsForm = forms.get_submit_review_form(request)
+    form = SubmissionCommentsForm(
         instance=article,
     )
 
     if request.POST and 'next_step' in request.POST:
-        form = forms.SubmissionCommentsForm(
+        form = SubmissionCommentsForm(
             request.POST,
             instance=article,
         )
