@@ -60,9 +60,11 @@
                     {% endblock breadcrumbs %}
                 </ul>
             </nav>
-            {% if article.pk %}
-                {% include "admin/elements/article_jump.html" %}
-            {% endif %}
+            {% block article_jump %}
+                {% if article.pk %}
+                    {% include "admin/elements/article_jump.html" %}
+                {% endif %}
+            {% endblock article_jump %}
         </div>
     </div>
 
