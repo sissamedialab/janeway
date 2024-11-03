@@ -17,6 +17,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 
 from core import files, models as core_models
+from journal import logic as journal_logic
 from journal.models import Issue
 from repository import models as preprint_models
 from security.decorators import (
@@ -115,7 +116,6 @@ def submit_issue(request, article_id):
         form = issue_form(journal=request.journal, user=request.user, data=request.POST, instance=article)
         if form.is_valid():
             article = form.save(commit=False)
-            article.journal = request.journal
             article.current_step = 2
             article.save()
             return redirect(reverse('submit_info', kwargs={'article_id': article_id}))
@@ -250,6 +250,9 @@ def submit_info(request, article_id):
                 form.save(request=request)
                 article.current_step = 3
                 article.save()
+
+                if article.primary_issue:
+                    journal_logic.handle_assign_issue(request, article, article.primary_issue)
 
                 return redirect(
                     reverse(
