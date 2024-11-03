@@ -251,8 +251,8 @@ def submit_info(request, article_id):
                 article.current_step = 3
                 article.save()
 
-                if article.primary_issue:
-                    journal_logic.handle_assign_issue(request, article, article.primary_issue)
+                if article.projected_issue:
+                    journal_logic.handle_assign_issue(request, article, article.projected_issue)
 
                 return redirect(
                     reverse(
