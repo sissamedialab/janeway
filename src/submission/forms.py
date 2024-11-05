@@ -114,7 +114,7 @@ class ArticleStart(forms.ModelForm):
 class SelectIssueForm(forms.ModelForm):
     """Used to choose the destination special issue during submission."""
 
-    primary_issue = forms.ModelChoiceField(
+    projected_issue = forms.ModelChoiceField(
         queryset=None,
         required=False,
         blank=True,
@@ -124,14 +124,14 @@ class SelectIssueForm(forms.ModelForm):
 
     class Meta:
         model = models.Article
-        fields = ("primary_issue",)
+        fields = ("projected_issue",)
 
     def __init__(self, *args, **kwargs):
         """Init the query set now, otherwise we are missing a current_journal."""
         journal = kwargs.pop('journal', False)
         user = kwargs.pop('user', False)
         super().__init__(*args, **kwargs)
-        self.fields["primary_issue"].queryset = (
+        self.fields["projected_issue"].queryset = (
             journal_models.Issue.objects.for_submission(user=user, journal=journal)
         )
 

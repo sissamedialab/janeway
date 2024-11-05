@@ -33,7 +33,7 @@
                     <div class="content">
                         {% include "elements/forms/errors.html" with form=form %}
                         <div class="{% if request.journal.submissionconfiguration.subtitle %}large-6{% else %}large-12{% endif %} columns">
-                            {{ form.primary_issue|foundation }}
+                            {{ form.projected_issue|foundation }}
                         </div>
                     </div>
                     <div class="large-12 columns">
