@@ -656,9 +656,9 @@ class Article(AbstractLastModifiedModel):
     competing_interests_bool = models.BooleanField(default=False)
     competing_interests = JanewayBleachField(
         blank=True, null=True,
-        help_text="If you have any conflict "
-            "of interests in the publication of this "
-            "article please state them here.",
+        help_text="If you have any conflict of interests in the publication of this article please state them here. "
+                  "If you have no conflict of interest, then please write"
+                  "“I have no conflicts of interest to declare”.",
     )
     rights = JanewayBleachField(
         blank=True, null=True,
