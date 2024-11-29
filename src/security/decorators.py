@@ -769,12 +769,13 @@ def article_edit_user_required(func):
 
     def wrapper(request, *args, **kwargs):
 
-        if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
-            deny_access(request)
-
         article_id = kwargs['article_id']
 
         article = models.Article.get_article(request.journal, 'id', article_id)
+
+        if (not request.user.is_staff and not request.user.check_role(request.journal, 'director') and
+                not request.user == article.correspondence_author):
+            deny_access(request)
 
         if article.can_edit(request.user):
             return func(request, *args, **kwargs)
