@@ -112,7 +112,7 @@ def senior_editor_user_required(func):
 
     @base_check_required
     def wrapper(request, *args, **kwargs):
-        
+
         if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
             deny_access(request)
 
@@ -213,7 +213,7 @@ def role_can_access(access_setting):
 
             journal_roles = request.user.roles.get(request.journal.code) or set()
             setting_roles = set(setting.processed_value or [])
-            
+
             # If no roles for the setting are configured we deny access
             # in the event that we want all roles to have access they
             # should be explicitly defined.
@@ -735,8 +735,9 @@ def article_stage_accepted_or_later_or_staff_required(func):
     @wraps(func)
     def wrapper(request, *args, **kwargs):
 
-        if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
-            deny_access(request)
+        # FIXME! Review access logic; see specs#1238
+        # if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
+        #     deny_access(request)
 
         identifier_type = kwargs['identifier_type']
         identifier = kwargs['identifier']
@@ -795,9 +796,9 @@ def file_user_required(func):
     """
 
     def wrapper(request, *args, **kwargs):
-
-        if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
-            deny_access(request)
+        # FIXME! Review access logic; see specs#1238
+        # if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
+        #     deny_access(request)
 
         file_id = kwargs['file_id']
 
