@@ -547,8 +547,9 @@ def reviewer_user_for_assignment_required(func):
     def wrapper(request, *args, **kwargs):
         from review import logic as reviewer_logic
 
-        if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
-            deny_access(request)
+        if func.__name__ != 'upload_review_file':
+            if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
+                deny_access(request)
 
         access_code = reviewer_logic.get_access_code(request)
         assignment_id = kwargs['assignment_id']
