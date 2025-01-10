@@ -7,7 +7,9 @@ default:
 
 stages:
   - build
+  - test
   - deploy
+
 
 include:
   - project: 'wjs/wjs-profile-project'
