@@ -11,9 +11,11 @@ stages:
 
 include:
   - project: 'wjs/wjs-profile-project'
-    ref: master
+    ref: wjs-develop
     file: '.gitlab-ci-pkg-deploy.yml'
-
+  - project: 'wjs/wjs-profile-project'
+    ref: wjs-develop
+    file: '.gitlab-ci-run-tests.yml'
 
 deploy_to_test:
   extends:
@@ -118,3 +120,11 @@ build_janeway_image_wjs_develop:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
+
+
+run-tests-on-security-updates:
+  when: manual
+  extends:
+    - .run-tests
+  before_script:
+    - pip install -r requirements.txt
