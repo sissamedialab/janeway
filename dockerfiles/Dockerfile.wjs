@@ -21,7 +21,7 @@ RUN echo "Cloning Janeway code ${BRANCH}..." && \
     git checkout origin/${BRANCH} && \
     git pull
 RUN echo  "Installing Janeway requirements..." && \
-    pip install -r /janeway/requirements.txt
+    pip install -r /janeway/requirements.txt -c /janeway/constraints.txt
 RUN echo "Cloning typesetting plugin at tag v1.6.1..." && \
     cd / && \
     git clone --branch v1.6.1 --single-branch --depth 3 https://github.com/openlibhums/typesetting.git && \

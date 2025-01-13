@@ -131,4 +131,4 @@ run-tests-on-security-updates:
   before_script:
     - git clone https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.sissamedialab.it/wjs/wjs-profile-project.git
     - cd wjs-profile-project/
-    - pip install -r ../requirements.txt
+    - pip install -r ../requirements.txt -c ../constraints.txt
