@@ -62,5 +62,3 @@ ua-parser==0.16.1
 # See #3736
 urllib3<2
 user-agents==2.2.0
-# Security updates - specs#850
-aiohttp~=3.10.11
