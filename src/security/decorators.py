@@ -809,10 +809,10 @@ def file_user_required(func):
         file_object = get_object_or_404(core_models.File, pk=file_id)
 
         if file_object.privacy == 'public':
-            return True
+            return func(request, *args, **kwargs)
 
         if user.is_anonymous:
-            return False
+            deny_access(request)
 
         if not request.user.is_staff and not request.user.check_role(request.journal, 'director'):
             deny_access(request)
