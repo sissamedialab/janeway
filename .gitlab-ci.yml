@@ -29,6 +29,7 @@ deploy_to_test:
     url: https://wjs-test-test-journals.wjapp.it/
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
+  when: manual
 
 
 deploy_to_dev:
@@ -45,7 +46,6 @@ deploy_to_dev:
     url: https://wjs-test-dev-journals.wjapp.it/
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
-  when: manual
 
 deploy_to_pp:
   extends:
