@@ -807,7 +807,7 @@ def file_user_required(func):
         if file_object.privacy == 'public':
             return func(request, *args, **kwargs)
 
-        if user.is_anonymous:
+        if request.user.is_anonymous:
             deny_access(request)
 
         if not request.user.is_staff:
