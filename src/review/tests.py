@@ -776,7 +776,9 @@ class ReviewTests(TestCase):
             form=self.review_form,
             is_complete=True,
             decision='withdrawn',
+            date_complete = timezone.now()
         )
+
 
         self.review_assignment_declined, created = review_models.ReviewAssignment.objects.get_or_create(
             article=self.article_review_completed,

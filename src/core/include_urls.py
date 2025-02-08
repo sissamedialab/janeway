@@ -62,10 +62,6 @@ urlpatterns = [
     re_path(r'^reset/step/2/(?P<token>[\w-]+)/$', core_views.reset_password, name='core_reset_password'),
     re_path(r'^profile/$', core_views.edit_profile, name='core_edit_profile'),
     re_path(r'^logout/$', core_views.user_logout, name='core_logout'),
-    re_path(r'^dashboard/$', core_views.dashboard, name='core_dashboard'),
-    re_path(r'^dashboard/active/$', core_views.active_submissions, name='core_active_submissions'),
-    re_path(r'^dashboard/active/filters/$', core_views.active_submission_filter, name='core_submission_filter'),
-    re_path(r'^dashboard/article/(?P<article_id>\d+)/$', core_views.dashboard_article, name='core_dashboard_article'),
 
     re_path(r'^press/cover/$', press_views.serve_press_cover, name='press_cover_download'),
     re_path(r'^press/file/(?P<file_id>\d+)/$',
@@ -290,6 +286,18 @@ if len(settings.NOTIFY_FUNCS) == 0:
     for key, val in plugins.items():
         if hasattr(val, 'notify_hook'):
             settings.NOTIFY_FUNCS.append(val.notify_hook)
+
+if "plugins.wjs_review" not in settings.INSTALLED_APPS:
+    urlpatterns += [
+        re_path(r'^dashboard/$', core_views.dashboard, name='core_dashboard'),
+        re_path(r'^dashboard/active/$', core_views.active_submissions, name='core_active_submissions'),
+        re_path(r'^dashboard/active/filters/$', core_views.active_submission_filter, name='core_submission_filter'),
+        re_path(r'^dashboard/article/(?P<article_id>\d+)/$', core_views.dashboard_article, name='core_dashboard_article'),
+    ]
+else:
+    urlpatterns += [
+        path('dashboard/', include('wjs.jcom_profile.dashboard.urls')),
+    ]
 
 urlpatterns += [
     re_path(r'^site/(?P<page_name>.*)/$', cms_views.view_page, name='cms_page'),

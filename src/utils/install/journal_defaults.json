@@ -667,6 +667,25 @@
             "name": "Identifiers"
         },
         "setting": {
+            "description": "Whether or not to automatically register DOIs with Crossref at acceptance. If set to false, DOIs are generated at acceptance but should manually registered. Has no effect if `use_crossref` if off.",
+            "is_translatable": false,
+            "name": "register_doi_at_acceptance",
+            "pretty_name": "Register DOI at acceptance",
+            "type": "boolean"
+        },
+        "value": {
+            "default": "on"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "Identifiers"
+        },
+        "setting": {
             "description": "Whether or not to use Crossref's test server.",
             "is_translatable": false,
             "name": "crossref_test",
@@ -4706,7 +4725,7 @@
         "editable_by": [
             "journal-manager"
         ]
-    },  
+    },
     {
         "group": {
             "name": "general"
@@ -5132,5 +5151,119 @@
         "value": {
             "default": ""
         }
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the form used during the submission phase for editors.",
+            "is_translatable": true,
+            "name": "submit_info_form_editor_version",
+            "pretty_name": "General Publication Editor info form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.EditorArticleInfoSubmit"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the form used during the submission phase for authors.",
+            "is_translatable": true,
+            "name": "submit_info_form_general_version",
+            "pretty_name": "General Publication info form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.ArticleInfoSubmit"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Select Issue Form used during the submission phase for editors.",
+            "is_translatable": true,
+            "name": "submit_select_issue_form_editor_version",
+            "pretty_name": "General Publication Editor issue select form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.SelectIssueForm"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Select Issue Form used during the submission phase for authors.",
+            "is_translatable": true,
+            "name": "submit_select_issue_form_general_version",
+            "pretty_name": "General Publication issue select form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.SelectIssueForm"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Submit Review Form used during the submission phase.",
+            "is_translatable": true,
+            "name": "submit_submit_review_form_general_version",
+            "pretty_name": "General Submit Review form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.SubmissionCommentsForm"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
+    },
+    {
+        "group": {
+            "name": "general"
+        },
+        "setting": {
+            "description": "Dotted path of the Submit Start Form used during the submission phase.",
+            "is_translatable": true,
+            "name": "submit_submit_start_form_general_version",
+            "pretty_name": "General Submit Start, form",
+            "type": "char"
+        },
+        "value": {
+            "default": "submission.forms.ArticleStart"
+        },
+        "editable_by": [
+            "editor",
+            "journal-manager"
+        ]
     }
 ]

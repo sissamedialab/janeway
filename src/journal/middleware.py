@@ -3,6 +3,8 @@ __author__ = "Martin Paul Eve, Mauro Sanchez & Andy Byers"
 __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
+import json
+
 from django.utils import translation
 from django.conf import settings
 
@@ -38,6 +40,10 @@ class LanguageMiddleware(BaseMiddleware):
                 # If we have no languages use the defaults from settings.
                 available_languages = [lang[0] for lang in settings.LANGUAGES]
             else:
+                # Ugly fix for the double encoding issue - handling the mistyped data in the middleware ensure we will
+                # not have conflicts when porting our changes to 1.5
+                if isinstance(available_languages, str):
+                    available_languages = json.loads(available_languages)
                 # The default language must always be in available_languages.
                 available_languages.append(settings.LANGUAGE_CODE)
 

@@ -55,9 +55,11 @@
                 {% endblock breadcrumbs %}
               </ul>
             </nav>
-            {% if article.pk %}
-                {% include "admin/elements/article_jump.html" %}
-            {% endif %}
+            {% block article_jump %}
+                {% if article.pk %}
+                    {% include "admin/elements/article_jump.html" %}
+                {% endif %}
+            {% endblock article_jump %}
         </div>
     </div>
 
@@ -72,6 +74,8 @@
     {% endblock body %}
 </div>
 
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="{% static "JCOM-theme/js/materialize.min.js" %}"></script>
 <script src="{% static "admin/js/app.min.js" %}"></script>
 {% if settings.DEBUG %}
 <script src="{% static "common/js/tinymce/tinymce.js" %}"></script>

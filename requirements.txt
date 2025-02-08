@@ -10,7 +10,7 @@ django-bleach==3.1.0
 django-bootstrap4==23.2
 -e git+https://github.com/BirkbeckCTP/django-foundation-form.git@284fc5f08e58d8655c7301eddb49f920fda516d2#egg=foundationform
 django-countries[pyuca]==7.5.1
--e git+https://github.com/openlibhums/django-materializecss-form.git@be094ec283299ee8fd0a1dfe33e73a609fb2f680#egg=django-materializecss-form
+https://github.com/kalwalkden/django-materializecss-form/archive/refs/heads/saemideluxe-patch-1.zip#egg=django-materializecss-form
 django-debug-toolbar==3.7.0
 django-hCaptcha==0.2.0
 django-hijack==3.2.1
@@ -50,7 +50,7 @@ pycparser==2.14
 PyJWT==2.4.0
 Pillow==10.2.0
 python-crontab==2.2.3
-python-dateutil==2.8.1
+python-dateutil~=2.8.2
 python-docx==0.8.11
 python-magic==0.4.13
 pytz==2024.1

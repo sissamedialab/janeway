@@ -30,7 +30,10 @@ from core import (
 )
 from events import logic as event_logic
 from review import models, logic, forms, hypothesis
-from review.const import EditorialDecisions as ED
+from review.const import(
+    EditorialDecisions as ED,
+    ReviewerDecisions as RD,
+)
 from security.decorators import (
     editor_user_required, reviewer_user_required,
     reviewer_user_for_assignment_required,

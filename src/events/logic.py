@@ -3,6 +3,8 @@ __author__ = "Martin Paul Eve & Andy Byers"
 __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
+from collections import defaultdict
+
 # we need this for strict type checking on the event destroyer
 from submission import models as submission_models
 from django.conf import settings
@@ -12,7 +14,8 @@ class Events:
     """
     The event handling framework for Janeway
     """
-    _hooks = {}
+    _hooks = defaultdict(list)
+    _silenced_hooks = defaultdict(list)
 
     # list of event constants used internally by Janeway
 
@@ -23,6 +26,14 @@ class Events:
     # kwargs: article, request
     # raised when an article is submitted
     ON_ARTICLE_SUBMITTED = 'on_article_submitted'
+
+    # kwargs: article, request, file_id, original_filename
+    # raised when an article file is deleted
+    ON_ARTICLE_FILE_DELETE = 'on_article_file_delete'
+
+    # kwargs: article, request, file, file_type
+    # raised when an article file is uploaded
+    ON_ARTICLE_FILE_UPLOAD = 'on_article_file_upload'
 
     # kwargs: editor_assignment, request, email_data, acknowledgement (true), skip (boolean)
     # raised when an editor is manually assigned to an article(or skip the acknowledgement)
@@ -323,11 +334,33 @@ class Events:
     def register_for_event(event_name, *functions):
         """
         Register a function to fire on a specific event
+
+        Functions stored in `_silenced_hooks` are skipped.
+
         :param event_name: the name of the event
         :param functions: the functions to be called
         :return:
         """
-        if event_name not in Events._hooks:
-            Events._hooks[event_name] = []
+        filtered_functions = filter(lambda x: x not in Events._silenced_hooks[event_name], functions)
 
-        Events._hooks[event_name] += functions
+        Events._hooks[event_name].extend(filtered_functions)
+
+    @staticmethod
+    def unregister_for_event(event_name, *functions):
+        """
+        Unregister a function from a specific event.
+
+        I function is not registered yet, it's stored in `_silenced_hooks` to skip if `register_for_event` is called
+        after `unregister_for_event`.
+
+        :param event_name: the name of the event
+        :param functions: the functions to be removed
+        :return:
+        """
+        Events._silenced_hooks[event_name].extend(functions)
+
+        for function in functions:
+            try:
+                Events._hooks[event_name].remove(function)
+            except ValueError:
+                pass

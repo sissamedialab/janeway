@@ -23,16 +23,17 @@
                             <ul class="no-top-margin">
                                {% include "common/elements/password_rules.html" %}
                             </ul>
-                            <p>{% blocktrans %}For more information read our <a href="#" data-toggle="modal" data-target="#passwordmodal">password guide</a>.{% endblocktrans %}</p>
-                            {% include "common/elements/orcid_registration.html" with button_classes="btn orcid-button btn-block" %}
-                            <br>
+                            <p>{% blocktrans %}For more information read our
+                                <a href="#" data-toggle="modal" data-target="#passwordmodal">password guide</a>
+                                .{% endblocktrans %}</p>
+
                             {% bootstrap_form form %}
                             <p>
                                 {% trans "By registering an account you agree to our" %}
                                 {% include "common/accounts/register_privacy_policy.html" %}
                             </p>
                             {% if journal_settings.general.display_register_page_notice %}
-                            {{ journal_settings.general.register_page_notice|safe }}
+                                {{ journal_settings.general.register_page_notice|safe }}
                             {% endif %}
                             <p>
                                 <button type="submit"

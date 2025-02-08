@@ -567,12 +567,11 @@ class ArticleSearchManager(BaseSearchManagerMixin):
         if search_filters.get("full_text"):
             FileTextModel = swapper.load_model("core", "FileText")
             field_type = FileTextModel._meta.get_field("contents")
-            if isinstance(field_type, SearchVectorField):
-                vectors.append(model_utils.SearchVector(
-                    'galley__file__text__contents', weight="D"))
-            else:
-                vectors.append(SearchVector(
-                    'galley__file__text__contents', weight="D"))
+            # TODO: upstream janeway wraps this in a custom SearchVector
+            #       which is not compatiblewith django 3.2
+            #       we should prepare a test for this
+            vectors.append(SearchVector(
+                'galley__file__text__contents', weight="D"))
         if vectors:
             # Combine all vectors
             vector = vectors[0]
@@ -672,9 +671,9 @@ class Article(AbstractLastModifiedModel):
     competing_interests_bool = models.BooleanField(default=False)
     competing_interests = JanewayBleachField(
         blank=True, null=True,
-        help_text="If you have any conflict "
-            "of interests in the publication of this "
-            "article please state them here.",
+        help_text="If you have any conflict of interests in the publication of this article please state them here. "
+                  "If you have no conflict of interest, then please write"
+                  "“I have no conflicts of interest to declare”.",
     )
     rights = JanewayBleachField(
         blank=True, null=True,
@@ -1287,14 +1286,16 @@ class Article(AbstractLastModifiedModel):
             funding_enabled = self.journal.submissionconfiguration.funding
 
         if self.current_step == 1:
-            return reverse('submit_info', kwargs={'article_id': self.id})
+            return reverse('submit_issue', kwargs={'article_id': self.id})
         elif self.current_step == 2:
-            return reverse('submit_authors', kwargs={'article_id': self.id})
+            return reverse('submit_info', kwargs={'article_id': self.id})
         elif self.current_step == 3:
-            return reverse('submit_files', kwargs={'article_id': self.id})
-        elif self.current_step == 4 and funding_enabled:
-            return reverse('submit_funding', kwargs={'article_id': self.id})
+            return reverse('submit_authors', kwargs={'article_id': self.id})
         elif self.current_step == 4:
+            return reverse('submit_files', kwargs={'article_id': self.id})
+        elif self.current_step == 5 and funding_enabled:
+            return reverse('submit_funding', kwargs={'article_id': self.id})
+        elif self.current_step == 5:
             return reverse('submit_review', kwargs={'article_id': self.id})
         else:
             return reverse('submit_review', kwargs={'article_id': self.id})
@@ -1306,16 +1307,18 @@ class Article(AbstractLastModifiedModel):
         ):
             funding_enabled = self.journal.submissionconfiguration.funding
         if self.current_step == 1:
-            return 'Article Information'
+            return 'Article Issue'
         elif self.current_step == 2:
-            return 'Article Authors'
+            return 'Article Information'
         elif self.current_step == 3:
-            return 'Article Files'
-        elif self.current_step == 4 and funding_enabled:
-            return 'Article Funding'
+            return 'Article Authors'
         elif self.current_step == 4:
-            return 'Review Article Submission'
+            return 'Article Files'
         elif self.current_step == 5 and funding_enabled:
+            return 'Article Funding'
+        elif self.current_step == 5:
+            return 'Review Article Submission'
+        elif self.current_step == 6 and funding_enabled:
             return 'Review Article Submission'
         else:
             return 'Submission Complete'
@@ -1544,7 +1547,8 @@ class Article(AbstractLastModifiedModel):
 
         if self.journal.use_crossref:
             id = id_logic.generate_crossref_doi_with_pattern(self)
-            id.register()
+            if self.journal.register_doi_at_acceptance:
+                id.register()
 
     def decline_article(self):
         self.date_declined = timezone.now()

@@ -6,11 +6,13 @@ __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 import re
 
 from django import forms
+from django.utils.module_loading import import_string
 from django.utils.translation import gettext, gettext_lazy as _
 
 from submission import models
 from core import models as core_models
 from identifiers import models as ident_models
+from journal import models as journal_models
 from review.logic import render_choices
 from utils.forms import (
     KeywordModelForm,
@@ -20,6 +22,48 @@ from utils.forms import (
 from utils import setting_handler
 
 from tinymce.widgets import TinyMCE
+
+
+def get_submit_info_form(request):
+    if request.user.is_editor(request):
+        custom_form = setting_handler.get_setting(
+            "general", "submit_info_form_editor_version", request.journal
+        )
+    else:
+        custom_form = setting_handler.get_setting(
+            "general", "submit_info_form_general_version", request.journal
+        )
+    form_path = custom_form.processed_value
+    return import_string(form_path)
+
+
+def get_select_issue_form(request):
+    if request.user.is_editor(request):
+        custom_form = setting_handler.get_setting(
+            "general", "submit_select_issue_form_editor_version", request.journal
+        )
+    else:
+        custom_form = setting_handler.get_setting(
+            "general", "submit_select_issue_form_general_version", request.journal
+        )
+    form_path = custom_form.processed_value
+    return import_string(form_path)
+
+
+def get_submit_review_form(request):
+    custom_form = setting_handler.get_setting(
+        "general", "submit_submit_review_form_general_version", request.journal
+    )
+    form_path = custom_form.processed_value
+    return import_string(form_path)
+
+
+def get_submit_start_form(request):
+    custom_form = setting_handler.get_setting(
+        "general", "submit_submit_start_form_general_version", request.journal
+    )
+    form_path = custom_form.processed_value
+    return import_string(form_path)
 
 
 class PublisherNoteForm(forms.ModelForm):
@@ -71,6 +115,31 @@ class ArticleStart(forms.ModelForm):
             self.fields.pop('competing_interests')
 
 
+class SelectIssueForm(forms.ModelForm):
+    """Used to choose the destination special issue during submission."""
+
+    projected_issue = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        blank=True,
+        empty_label=gettext("No selection"),
+        widget=forms.RadioSelect(),
+    )
+
+    class Meta:
+        model = models.Article
+        fields = ("projected_issue",)
+
+    def __init__(self, *args, **kwargs):
+        """Init the query set now, otherwise we are missing a current_journal."""
+        journal = kwargs.pop('journal', False)
+        user = kwargs.pop('user', False)
+        super().__init__(*args, **kwargs)
+        self.fields["projected_issue"].queryset = (
+            journal_models.Issue.objects.for_submission(user=user, journal=journal)
+        )
+
+
 class ArticleInfo(KeywordModelForm, JanewayTranslationModelForm):
     FILTER_PUBLIC_FIELDS = False
 
@@ -102,6 +171,7 @@ class ArticleInfo(KeywordModelForm, JanewayTranslationModelForm):
         elements = kwargs.pop('additional_fields', None)
         submission_summary = kwargs.pop('submission_summary', None)
         journal = kwargs.pop('journal', None)
+        self.keep_primary_issue = kwargs.pop('keep_primary_issue', False)
         self.pop_disabled_fields = kwargs.pop('pop_disabled_fields', True)
         editor_view = kwargs.pop('editor_view', False)
         super(ArticleInfo, self).__init__(*args, **kwargs)
@@ -124,6 +194,10 @@ class ArticleInfo(KeywordModelForm, JanewayTranslationModelForm):
                 )
                 license_queryset = license_queryset.filter(
                     available_for_submission=self.FILTER_PUBLIC_FIELDS,
+                )
+            if article.primary_issue and article.primary_issue.allowed_sections.exists():
+                section_queryset = section_queryset.filter(
+                    pk__in=article.primary_issue.allowed_sections.values_list('pk', flat=True),
                 )
             self.fields['section'].queryset = section_queryset
             self.fields['license'].queryset = license_queryset
@@ -211,6 +285,12 @@ class ArticleInfo(KeywordModelForm, JanewayTranslationModelForm):
                     # fields to be required.
                     if editor_view:
                         self.fields[element.name].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.keep_primary_issue:
+            cleaned_data['primary_issue'] = self.instance.primary_issue
+        return cleaned_data
 
     def save(self, commit=True, request=None):
         article = super(ArticleInfo, self).save(commit=False)

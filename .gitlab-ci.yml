@@ -1,0 +1,120 @@
+default:
+  cache:
+    key: cache-default
+    paths:
+      - .cache
+      - /var/cache
+
+stages:
+  - build
+  - deploy
+
+include:
+  - project: 'wjs/wjs-profile-project'
+    ref: master
+    file: '.gitlab-ci-pkg-deploy.yml'
+
+
+deploy_to_test:
+  extends:
+    - .deploy
+  tags:
+    - inasset
+  variables:
+    SERVER_IP: "$TEST_SERVER_IP"
+    SERVER_USER: "$TEST_SERVER_USER"
+    DEPLOY_CMD: "deploy-test-janeway"
+  environment:
+    name: development
+    url: https://wjs-test-test-journals.wjapp.it/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+  when: manual
+
+
+deploy_to_dev:
+  extends:
+    - .deploy
+  tags:
+    - inasset
+  variables:
+    SERVER_IP: "$TEST_SERVER_IP"
+    SERVER_USER: "$TEST_SERVER_USER"
+    DEPLOY_CMD: "deploy-dev-janeway"
+  environment:
+    name: development
+    url: https://wjs-test-dev-journals.wjapp.it/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+
+deploy_to_pp:
+  extends:
+    - .deploy
+  tags:
+    - inasset
+  variables:
+    SERVER_IP: "$TEST_SERVER_IP"
+    SERVER_USER: "$TEST_SERVER_USER"
+    DEPLOY_CMD: "deploy-pp-janeway"
+  environment:
+    name: pre-production
+    url: https://wjs-test-pp-journals.wjapp.it/
+  when: manual
+
+
+deploy_to_production:
+  extends:
+    - .deploy
+  tags:
+    - inasset
+  variables:
+    SERVER_IP: "$PROD_SERVER_IP"
+    SERVER_USER: "$PROD_SERVER_USER"
+    DEPLOY_CMD: "deploy-prod-janeway"
+  environment:
+    name: production
+    url: https://journals.sissamedialab.it/
+  when: manual
+
+
+.build_janeway_image:
+  stage: build
+
+  # Important: runners that should support dind must have
+  # volumes = ["/certs/client",...
+  # privileged = true
+  tags:
+    - dind
+    - inasset
+
+  # We get
+  # *** WARNING: Service ... probably didn't start properly.
+  # Ignore for now; see:
+  # https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4550
+  services:
+    - docker:dind
+
+  # I wasn't able to find a way to use the group-level container registry from CI/CD
+  # See https://gitlab.com/gitlab-org/gitlab/-/issues/218285
+  # So here I just use the project's registry.
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway"
+
+  # To cache from the previous image (--cache-from), see
+  # https://docs.docker.com/engine/reference/commandline/build/#cache-from
+  #
+  # To authenticate with the Container Registry, see
+  # https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker pull $TAG || true
+    - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --build-arg BRANCH=$CI_COMMIT_BRANCH --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
+    - docker push $TAG
+
+build_janeway_image_wjs_develop:
+  extends:
+    - .build_janeway_image
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
