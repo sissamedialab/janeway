@@ -134,10 +134,14 @@ run-tests-on-security-updates:
     # but we need to test if new updates might change anything.
     # So we (re)install requirements from those modified in the branch that triggered this job.
     - pip install -r "$CI_PROJECT_DIR"/requirements.txt -c "$CI_PROJECT_DIR"/constraints.txt
-    # Now, install the latest version of wjs (?)
-    # TBD: install as package?
-    - git clone https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.sissamedialab.it/wjs/wjs-profile-project.git
+    # Now, install the latest version of wjs:
+    # we want to test the new library versions on the latest WJS version
+    # the best thing we can do is to find the latest tag and git-clone from that
+    - git clone --depth 1 "https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.sissamedialab.it/wjs/wjs-profile-project.git"
     - cd wjs-profile-project/
+    - git fetch --tags --quiet
+    - latestTag=$(git describe --tags "$(git rev-list --tags --max-count=1)")
+    - git checkout "$latestTag"
     # The script that sets-up WJS for tests expects CI_PROJECT_DIR to point to a folder that contains WJS,
     # but here we are in Janeway, so we change it to suite us. We'll reset it later.
     - export OLD="$CI_PROJECT_DIR"
