@@ -39,17 +39,17 @@ If you want to install custom python libraries for development, you can drop the
 Using Lando for a development environment (optional)
 -----------------------------------------------------------------
 
-`Lando <https://lando.dev/>`_ can be used to construct and manage a local a 
-development environment. Here are the steps required to get Janeway running on 
+`Lando <https://lando.dev/>`_ can be used to construct and manage a local a
+development environment. Here are the steps required to get Janeway running on
 your local machine, using Lando:
 
-.. note:: Lando comes bundled with Docker Desktop for MacOS, if you already have Docker 
-  Desktop installed on your Mac, don't re-install it. You should instead ensure you have the 
+.. note:: Lando comes bundled with Docker Desktop for MacOS, if you already have Docker
+  Desktop installed on your Mac, don't re-install it. You should instead ensure you have the
   same (or newer) version as what is bundled with Lando.
 
 1. Make sure `Lando <https://lando.dev/>`_ is installed
 2. Optionally, copy ``dockerfiles/lando_local.env.example`` to ``dockerfiles/lando_local.env`` and customize as appropriate (the
-   database configuration is done with environment variables, so pay attention to 
+   database configuration is done with environment variables, so pay attention to
    ``dockerfiles/lando_local.env`` if it's important to you)
 3. ``lando poweroff`` (defensively ensure no other Lando environments are running, probably not necessary, but a good habit)
 4. ``lando rebuild``
@@ -105,7 +105,7 @@ On Debian systems:
 4. From the project root directory run the following to install python
    dependencies:
 
-   ``pip3 install -r requirements.txt``
+   ``pip3 install -r requirements.txt -c constraints.txt``
 
 You should now proceed to “Database Setup and Final Installation”,
 below.
