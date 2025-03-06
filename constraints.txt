@@ -1,0 +1,4 @@
+# GHSA-8495-4g3g-x7pr
+aiohttp~=3.10.11
+# GHSA-h4gh-qq45-vh27 GHSA-79v4-65xg-pq4g
+cryptography~=44.0.1

@@ -7,13 +7,17 @@ default:
 
 stages:
   - build
+  - test
   - deploy
+
 
 include:
   - project: 'wjs/wjs-profile-project'
-    ref: master
+    ref: wjs-develop
     file: '.gitlab-ci-pkg-deploy.yml'
-
+  - project: 'wjs/wjs-profile-project'
+    ref: wjs-develop
+    file: '.gitlab-ci-run-tests.yml'
 
 deploy_to_test:
   extends:
@@ -118,3 +122,31 @@ build_janeway_image_wjs_develop:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
+
+
+# Do not use to test changes to Janeway code!
+run-tests-on-security-updates:
+  when: manual
+  extends:
+    - .run-tests
+  before_script:
+    # Note: we are running on an image that has already janeway installed,
+    # but we need to test if new updates might change anything.
+    # So we (re)install requirements from those modified in the branch that triggered this job.
+    - pip install -r "$CI_PROJECT_DIR"/requirements.txt -c "$CI_PROJECT_DIR"/constraints.txt
+    # Now, install the latest version of wjs:
+    # we want to test the new library versions on the latest WJS version
+    # the best thing we can do is to find the latest tag and git-clone from that
+    - git clone --depth 1 "https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.sissamedialab.it/wjs/wjs-profile-project.git"
+    - cd wjs-profile-project/
+    - git fetch --tags --quiet
+    - latestTag=$(git describe --tags "$(git rev-list --tags --max-count=1)")
+    - git checkout "$latestTag"
+    # The script that sets-up WJS for tests expects CI_PROJECT_DIR to point to a folder that contains WJS,
+    # but here we are in Janeway, so we change it to suite us. We'll reset it later.
+    - export OLD="$CI_PROJECT_DIR"
+    - export CI_PROJECT_DIR="$(pwd)"
+
+  after_script:
+    # reset the modified ci/cd variables
+    - export CI_PROJECT_DIR="$OLD"
