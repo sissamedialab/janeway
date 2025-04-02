@@ -32,7 +32,7 @@ deploy_to_test:
     name: development
     url: https://wjs-test-test-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: '$CI_COMMIT_BRANCH == "wjs-develop" || $CI_COMMIT_BRANCH == "feature/issue-1281-merge-janeway-17"'
   when: manual
 
 

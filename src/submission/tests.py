@@ -13,6 +13,7 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import translation, timezone
 from django.urls.base import clear_script_prefix
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
 from django.test.utils import override_settings
 
@@ -567,6 +568,33 @@ class SubmissionTests(TestCase):
             '0000-0003-2126-266X',
         )
 
+    def test_author_form_harmful_inputs(self):
+        harmful_string = '<span onClick="alert()"> This are not the droids you are looking for </span>'
+        for i, attr in enumerate({
+            "first_name",
+            "last_name",
+            "middle_name",
+            "name_prefix",
+            "suffix",
+            "institution",
+            "department",
+        }):
+            form = forms.AuthorForm(
+                {
+                    'first_name': 'Andy',
+                    'last_name': 'Byers',
+                    'biography': 'Andy',
+                    'institution': 'Birkbeck, University of London',
+                    'email': f'andy{i}@janeway.systems',
+                    'orcid': 'https://orcid.org/0000-0003-2126-266X',
+                    **{attr: harmful_string},
+                }
+            )
+            self.assertFalse(
+                form.is_valid(),
+                f"Harmful code injected into field '{attr}'"
+            )
+
     @override_settings(URL_CONFIG='domain')
     def test_article_encoding_bibtex(self):
         article = helpers.create_article(
@@ -587,8 +615,8 @@ class SubmissionTests(TestCase):
         clear_cache()
         bibtex = encoding.encode_article_as_bibtex(article)
         expected = """
-            @article{TST %s,
-                author = {Martin Eve, Mauro Sanchez},
+            @article{TST%s,
+                author = {Martin Eve AND Mauro Sanchez},
                 title = {Test article: a test article},
                 volume = {2},
                 year = {1990},
@@ -597,7 +625,7 @@ class SubmissionTests(TestCase):
                 abstract = {test_abstract},
                 month = {1},
                 issn = {%s},
-                publisher={},
+                publisher ={},
                 journal = {%s}
             }
         """ % (article.pk, article.pk, article.journal.issn, article.journal.name)
@@ -628,8 +656,10 @@ class SubmissionTests(TestCase):
         expected = """
             TY  - JOUR
             AB  - test_abstract
-            AU  - Martin Eve, Mauro Sanchez
-            DA  - 1990/1//
+            AU  - Martin Eve
+            AU  - Mauro Sanchez
+            PA  - 1990
+            DA  - 1990/01/01
             IS  - 2
             VL  - 2
             PB  -
@@ -904,3 +934,30 @@ class FrozenAuthorModelTest(TestCase):
 
     def test_full_name(self):
         self.assertEqual('Dr. S. Bella Rogers Esq.', self.frozen_author.full_name())
+
+
+class ArticleFormTests(TestCase):
+
+    def test_competing_interests_in_edit_article_metadata(self):
+        form = forms.EditArticleMetadata()
+        self.assertIn(
+            'competing_interests',
+            form.fields,
+            "'competing_interests' should be present in EditArticleMetadata",
+        )
+
+    def test_competing_interests_not_in_article_info_submit(self):
+        form = forms.ArticleInfoSubmit()
+        self.assertNotIn(
+            'competing_interests',
+            form.fields,
+            "'competing_interests' should NOT be present in ArticleInfoSubmit",
+        )
+
+    def test_competing_interests_not_in_editor_article_info_submit(self):
+        form = forms.EditorArticleInfoSubmit()
+        self.assertNotIn(
+            'competing_interests',
+            form.fields,
+            "'competing_interests' should NOT be present in EditorArticleInfoSubmit"
+        )

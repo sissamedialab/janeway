@@ -13,7 +13,16 @@ import re
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import OuterRef, Subquery, Value
+from django.db.models import (
+    OuterRef,
+    Subquery,
+    Value,
+    TextField,
+    F,
+    ExpressionWrapper,
+    DateTimeField
+)
+from django.db.models.functions import Concat, Coalesce
 from django.db.models.signals import post_save, m2m_changed
 from django.utils.safestring import mark_safe
 from django.dispatch import receiver
@@ -34,13 +43,20 @@ from core.model_utils import (
     SVGImageField,
     AbstractLastModifiedModel,
     JanewayBleachField,
+    JanewayBleachCharField,
 )
 from press import models as press_models
 from submission import models as submission_models
-from utils import setting_handler, logic, install
+from utils import (
+    setting_handler,
+    logic,
+    install,
+    db_functions,
+)
 from utils.function_cache import cache, mutable_cached_property
 from utils.logger import get_logger
 from review import models as review_models
+from identifiers import models as identifier_models
 
 logger = get_logger(__name__)
 
@@ -356,7 +372,7 @@ class Journal(AbstractSiteModel):
                 pass
         return obj, path
 
-    def site_url(self, path=""):
+    def site_url(self, path="", query=''):
         if self.domain and not settings.URL_CONFIG == 'path':
 
             # Handle domain journal being browsed in path mode
@@ -368,9 +384,10 @@ class Journal(AbstractSiteModel):
                     scheme=self._get_scheme(),
                     port=None,
                     path=path,
+                    query=query,
             )
         else:
-            return self.press.site_path_url(self, path)
+            return self.press.site_path_url(self, path, query=query)
 
     def next_issue_order(self):
         issue_orders = [issue.order for issue in Issue.objects.filter(journal=self)]
@@ -590,6 +607,89 @@ class Journal(AbstractSiteModel):
 
             default_review_form.elements.add(main_element)
 
+    def archive_published_articles(self):
+        # Subquery will attempt to grab a DOI for this article.
+        doi_subquery = identifier_models.Identifier.objects.filter(
+            article=OuterRef('pk'),
+            id_type="doi",
+            enabled=True
+        ).annotate(
+            identifier_with_type=Concat(Value('DOI: '), 'identifier',
+                                        output_field=TextField())
+        ).values('identifier_with_type')[:1]
+
+        # Subquery will attempt to grab a Pub ID for this article.
+        pubid_subquery = identifier_models.Identifier.objects.filter(
+            article=OuterRef('pk'),
+            id_type="pubid",
+            enabled=True
+        ).annotate(
+            identifier_with_type=Concat(Value('Pub ID: '), 'identifier',
+                                        output_field=TextField())
+        ).values('identifier_with_type')[:1]
+
+        # Fetch published articles with either DOI, Pub ID or a warning.
+        # Additionally, a subquery is run to get frozen authors without
+        # running additional queries.
+        articles_with_identifiers = submission_models.Article.objects.filter(
+            journal=self,
+            stage=submission_models.STAGE_PUBLISHED
+        ).annotate(
+            preferred_identifier=Coalesce(
+                Subquery(doi_subquery, output_field=TextField()),
+                Subquery(pubid_subquery, output_field=TextField()),
+                Value('No DOI or Pub ID Registered', output_field=TextField())
+            ),
+            frozen_authors=ExpressionWrapper(
+                db_functions.GroupConcat(
+                    Concat(
+                        Coalesce(F('frozenauthor__first_name'), Value('')),
+                        Value(' '),
+                        Coalesce(F('frozenauthor__middle_name'), Value('')),
+                        Value(' '),
+                        Coalesce(F('frozenauthor__last_name'), Value(''))
+                    ),
+                ),
+                output_field=TextField()
+            )
+        ).order_by(
+            '-date_published'
+        )
+
+        return articles_with_identifiers
+
+    def rejected_and_archived_articles(self):
+        date_archived_subquery = submission_models.ArticleStageLog.objects.filter(
+            article=OuterRef('pk'),
+            stage_to='Archived'
+        ).order_by('date_time').values('date_time')[:1]
+
+        return submission_models.Article.objects.filter(
+            journal=self,
+            stage__in=[
+                submission_models.STAGE_REJECTED,
+                submission_models.STAGE_ARCHIVED,
+            ],
+        ).annotate(
+            frozen_authors=ExpressionWrapper(
+                db_functions.GroupConcat(
+                    Concat(
+                        Coalesce(F('frozenauthor__first_name'), Value('')),
+                        Value(' '),
+                        Coalesce(F('frozenauthor__middle_name'), Value('')),
+                        Value(' '),
+                        Coalesce(F('frozenauthor__last_name'), Value(''))
+                    ),
+                ),
+                output_field=TextField()
+            ),
+            date_archived=Subquery(
+                date_archived_subquery,
+                output_field=DateTimeField(),
+            )
+        ).order_by(
+            '-date_declined'
+        )
 
 class PinnedArticle(models.Model):
     journal = models.ForeignKey(
@@ -1162,6 +1262,13 @@ class Issue(AbstractLastModifiedModel):
                 self.update_display_title(save=False)
         super().save(*args, **kwargs)
 
+    @property
+    def publisher(self):
+        return (
+            self.journal.publisher
+            or self.journal.press.name
+        )
+
     def __str__(self):
         return (
             '{self.issue_type.pretty_name}: '
@@ -1181,8 +1288,8 @@ class IssueType(models.Model):
     )
     code = models.CharField(max_length=255)
 
-    pretty_name = models.CharField(max_length=255)
-    custom_plural = models.CharField(max_length=255, blank=True, null=True)
+    pretty_name = JanewayBleachCharField(max_length=255)
+    custom_plural = JanewayBleachCharField(max_length=255, blank=True)
 
     def __str__(self):
         return (

@@ -25,11 +25,11 @@ from repository import forms, logic as repository_logic, models
 from core import (
     email as core_email,
     files,
-    forms as core_forms,
     models as core_models,
+    forms as core_forms,
+    views as core_views,
 )
 from journal import models as journal_models
-from submission import models as submission_models
 
 
 from utils import (
@@ -77,34 +77,32 @@ def repository_home(request):
     return render(request, template, context)
 
 
-def repository_sitemap(request, subject_id=None):
+def sitemap(request, subject_id=None):
     """
     :param request: HttpRequest object
+    :param subject_id: Int, primary key of a Subject object
     :return: HttpResponse
     """
-    try:
-        if subject_id:
-            subject = get_object_or_404(
-                models.Subject,
-                pk=subject_id,
-                repository=request.repository,
-            )
-            path_parts = [
-                request.repository.code,
-                '{}_sitemap.xml'.format(subject.pk),
-            ]
-        else:
-            path_parts = [
-                request.repository.code,
-                'sitemap.xml',
-            ]
+    if subject_id:
+        subject = get_object_or_404(
+            models.Subject,
+            pk=subject_id,
+            repository=request.repository,
+        )
+        path_parts = [
+            request.repository.code,
+            '{}_sitemap.xml'.format(subject.pk),
+        ]
+    else:
+        path_parts = [
+            request.repository.code,
+            'sitemap.xml',
+        ]
 
-        if path_parts:
-            return files.serve_sitemap_file(path_parts)
-    except FileNotFoundError:
-        logger.warning('Sitemap for {} not found.'.format(request.repository.name))
-
-    raise Http404()
+    return core_views.sitemap(
+        request,
+        path_parts,
+    )
 
 
 @login_required
@@ -747,21 +745,6 @@ def repository_files(request, preprint_id):
 
         if 'complete' in request.POST:
             if preprint.submission_file:
-                preprint.submit_preprint()
-                kwargs = {'request': request, 'preprint': preprint}
-                event_logic.Events.raise_event(
-                    event_logic.Events.ON_PREPRINT_SUBMISSION,
-                    **kwargs,
-                )
-
-                messages.add_message(
-                    request,
-                    messages.SUCCESS,
-                    '{object} {title} submitted.'.format(
-                        object=request.repository.object_name,
-                        title=preprint.title
-                    )
-                )
                 return redirect(
                     reverse(
                         'repository_review',
@@ -798,12 +781,24 @@ def repository_review(request, preprint_id):
         models.Preprint,
         pk=preprint_id,
         owner=request.user,
-        date_submitted__isnull=False,
         repository=request.repository,
     )
 
     if request.POST and 'complete' in request.POST:
-
+        preprint.submit_preprint()
+        kwargs = {'request': request, 'preprint': preprint}
+        event_logic.Events.raise_event(
+            event_logic.Events.ON_PREPRINT_SUBMISSION,
+            **kwargs,
+        )
+        messages.add_message(
+            request,
+            messages.SUCCESS,
+            '{object} {title} submitted.'.format(
+                object=request.repository.object_name,
+                title=preprint.title
+            )
+        )
         return redirect(reverse('repository_dashboard'))
 
     template = 'admin/repository/submit/review.html'

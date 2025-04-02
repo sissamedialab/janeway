@@ -243,6 +243,10 @@ main a:hover {
     background-color: rgba(55, 55, 55, .8);
 }
 
+.carousel-caption h2 a {
+    color: white;
+}
+
 .row-eq-height {
     display: -webkit-box;
     display: -webkit-flex;
@@ -452,4 +456,8 @@ header svg {
 
 .page-item.active .page-link {
   background-color: #4F637D;
+}
+
+.social-share-btn{
+    border: 1px black solid;
 }

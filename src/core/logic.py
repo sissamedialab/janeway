@@ -454,6 +454,7 @@ def get_settings_to_edit(display_group, journal, user):
             'switch_language', 'enable_language_text', 'google_analytics_code',
             'use_ga_four', 'display_login_page_notice', 'login_page_notice',
             'display_register_page_notice', 'register_page_notice',
+            'support_email', 'support_contact_message_for_staff',
             'from_address', 'replyto_address',
         ]
 
@@ -521,6 +522,12 @@ def get_settings_to_edit(display_group, journal, user):
                 'name': 'multi_page_editorial',
                 'object': setting_handler.get_setting('styling',
                                                       'multi_page_editorial',
+                                                      journal),
+            },
+            {
+                'name': 'display_countries_editorial_team',
+                'object': setting_handler.get_setting('styling',
+                                                      'display_countries_editorial_team',
                                                       journal),
             }
         ]

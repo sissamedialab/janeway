@@ -577,7 +577,16 @@ def submit_files(request, article_id):
         pk=article_id,
         journal=request.journal,
     )
-    form = forms.FileDetails()
+    ms_form = forms.FileDetails(
+        initial={
+            "label": article.journal.submissionconfiguration.submission_file_text,
+        },
+    )
+    data_form = forms.FileDetails(
+        initial={
+            "label": "Figure/Data File",
+        },
+    )
     configuration = request.journal.submissionconfiguration
 
     if article.current_step < 4 and not request.user.is_staff:
@@ -611,10 +620,10 @@ def submit_files(request, article_id):
             return redirect(reverse('submit_files', kwargs={'article_id': article_id}))
 
         if 'manuscript' in request.POST:
-            form = forms.FileDetails(request.POST)
+            ms_form = forms.FileDetails(request.POST)
             uploaded_file = request.FILES.get('file')
-            if logic.check_file(uploaded_file, request, form):
-                if form.is_valid():
+            if logic.check_file(uploaded_file, request, ms_form):
+                if ms_form.is_valid():
                     try:
                         with transaction.atomic():
                             new_file = files.save_file_to_article(
@@ -623,8 +632,8 @@ def submit_files(request, article_id):
                                 request.user,
                             )
                             article.manuscript_files.add(new_file)
-                            new_file.label = form.cleaned_data['label']
-                            new_file.description = form.cleaned_data['description']
+                            new_file.label = ms_form.cleaned_data['label']
+                            new_file.description = ms_form.cleaned_data['description']
                             new_file.save()
 
                             event_logic.Events.raise_event(
@@ -643,7 +652,7 @@ def submit_files(request, article_id):
                         )
                     except Exception as e:
                         modal = 'manuscript'
-                        form.add_error(None, str(e))
+                        ms_form.add_error(None, str(e))
                     
 
 
@@ -704,7 +713,8 @@ def submit_files(request, article_id):
     context = {
         'article': article,
         'error': error,
-        'form': form,
+        'ms_form': ms_form,
+        'data_form': data_form,
         'modal': modal,
     }
 
@@ -781,7 +791,7 @@ def submit_review(request, article_id):
 
             return redirect(reverse('wjs_article_details', args=(article.articleworkflow.pk,)))
 
-    template = "admin/submission//submit_review.html"
+    template = "admin/submission/submit_review.html"
     context = {
         'article': article,
         'form': form,
@@ -817,7 +827,7 @@ def edit_metadata(request, article_id):
             article=article,
         )
 
-        info_form = forms.ArticleInfo(
+        info_form = forms.EditArticleMetadata(
             instance=article,
             additional_fields=additional_fields,
             submission_summary=submission_summary,
@@ -851,7 +861,7 @@ def edit_metadata(request, article_id):
                     return redirect(reverse_url)
 
             if 'metadata' in request.POST:
-                info_form = forms.ArticleInfo(
+                info_form = forms.EditArticleMetadata(
                     request.POST,
                     instance=article,
                     additional_fields=additional_fields,

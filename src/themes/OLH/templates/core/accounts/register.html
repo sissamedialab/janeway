@@ -1,4 +1,8 @@
 {% extends "core/base.html" %}
+{% comment %}
+  This template is deprecated. Account pages are now part of the back-office.
+{% endcomment %}
+
 {% load foundation %}
 {% load i18n %}
 {% load recaptcha2 %}
@@ -36,7 +40,11 @@
                         </ul>
                         <p>{% blocktrans %}For more information read our <a href="#" data-open="password-modal">password guide</a>.{% endblocktrans %}</p>
 
+                        {% include "common/elements/orcid_registration.html" with button_classes="button expanded orcid-button" %}
+
                         {% include "elements/forms/errors.html" with form=form %}
+
+                        {{ form.orcid }}
 
                         <div class="row">
                             <div class="large-12 columns">

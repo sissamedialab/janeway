@@ -18,7 +18,13 @@ from production import models as production_models
 from submission import models
 from copyediting import models as copyediting_models
 from proofing import models as proofing_models
-from security.logic import can_edit_file, can_view_file_history, can_view_file, is_data_figure_file
+from security.logic import (
+    can_edit_file,
+    can_see_pii,
+    can_view_file,
+    can_view_file_history,
+    is_data_figure_file,
+)
 from utils import setting_handler
 from utils.logger import get_logger
 from repository import models as preprint_models
@@ -302,6 +308,25 @@ def editor_user_required(func):
             deny_access(request)
 
     return wrapper
+
+
+def editor_user_required_and_can_see_pii(func):
+    """Extends editor_user_required to check if SE can see PII"""
+    @editor_user_required
+    def can_see_pii_decorator(request, *args, **kwargs):
+        article_id = kwargs.get('article_id')
+        article = get_object_or_404(models.Article, pk=article_id)
+        if (
+            request.user in article.section_editors()
+            and not can_see_pii(request, article)
+        ):
+            deny_access(
+                request,
+                "You cannot access this page yet, because it could reveal"
+                " personally identifiable information."
+            )
+        return func(request, *args, **kwargs)
+    return can_see_pii_decorator
 
 
 def any_editor_user_required(func):
@@ -754,7 +779,7 @@ def article_stage_accepted_or_later_or_staff_required(func):
             deny_access(request)
         elif article_object is not None and (request.user.is_editor(request) or request.user.is_staff):
             return func(request, *args, **kwargs)
-        elif request.user in article_object.section_editors():
+        elif article_object is not None and request.user in article_object.section_editors():
             return func(request, *args, **kwargs)
         else:
             deny_access(request)

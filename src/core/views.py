@@ -8,6 +8,7 @@ from importlib import import_module
 import json
 import pytz
 import time
+import warnings
 
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
@@ -17,6 +18,7 @@ from django.core.cache import cache
 from django.urls import NoReverseMatch, reverse
 from django.shortcuts import render, get_object_or_404, redirect, Http404
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.http import HttpResponse, QueryDict
 from django.contrib.sessions.models import Session
 from django.core.validators import validate_email
@@ -31,7 +33,7 @@ from django.utils import translation
 from django.db.models import Q, OuterRef, Subquery, Count, Avg
 from django.views import generic
 
-from core import models, forms, logic, workflow, models as core_models
+from core import models, forms, logic, workflow, files, models as core_models
 from core.model_utils import NotImplementedField, search_model_admin
 from security.decorators import (
     editor_user_required, article_author_required, has_journal,
@@ -141,10 +143,9 @@ def user_login(request):
     context = {
         'form': form,
     }
-    template = 'core/login.html'
+    template = 'admin/core/accounts/login.html'
 
     return render(request, template, context)
-
 
 def user_login_orcid(request):
     """
@@ -153,30 +154,33 @@ def user_login_orcid(request):
     :return: HttpResponse object
     """
     orcid_code = request.GET.get('code', None)
+    action = request.GET.get('state', 'login')
 
     if orcid_code and django_settings.ENABLE_ORCID:
         orcid_id = orcid.retrieve_tokens(
             orcid_code,
             request.site_type,
+            action=action
         )
 
         if orcid_id:
             try:
                 user = models.Account.objects.get(orcid=orcid_id)
-                user.backend = 'django.contrib.auth.backends.ModelBackend'
-                login(request, user)
+                if action == 'login':
+                    user.backend = 'django.contrib.auth.backends.ModelBackend'
+                    login(request, user)
 
-                if request.GET.get('next'):
-                    return redirect(request.GET.get('next'))
-                elif request.journal:
-                    return redirect(reverse('core_dashboard'))
-                else:
-                    return redirect(reverse('website_index'))
+                    if request.GET.get('next'):
+                        return redirect(request.GET.get('next'))
+                    elif request.journal:
+                        return redirect(reverse('core_dashboard'))
+                    else:
+                        return redirect(reverse('website_index'))
 
             except models.Account.DoesNotExist:
                 # Lookup ORCID email addresses
                 orcid_details = orcid.get_orcid_record_details(orcid_id)
-                for email in orcid_details.get("emails"):
+                for email in orcid_details.get("emails", []):
                     candidates = models.Account.objects.filter(email=email)
                     if candidates.exists():
                         # Store ORCID for future authentication requests
@@ -189,10 +193,13 @@ def user_login_orcid(request):
                         else:
                             return redirect(reverse('website_index'))
 
-                # Prepare ORCID Token for registration and redirect
-                models.OrcidToken.objects.filter(orcid=orcid_id).delete()
-                new_token = models.OrcidToken.objects.create(orcid=orcid_id)
+            # Prepare ORCID Token for registration and redirect
+            models.OrcidToken.objects.filter(orcid=orcid_id).delete()
+            new_token = models.OrcidToken.objects.create(orcid=orcid_id)
 
+            if action == 'register':
+                return redirect(reverse('core_register') + f'?token={new_token.token}')
+            else:
                 return redirect(reverse('core_orcid_registration', kwargs={'token': new_token.token}))
         else:
             messages.add_message(
@@ -228,23 +235,30 @@ def get_reset_token(request):
     :return: HttpResponse object
     """
     new_reset_token = None
+    form = forms.GetResetTokenForm()
 
     if request.POST:
-        email_address = request.POST.get('email_address')
-        messages.add_message(
-                request, messages.INFO,
-                _('If your account was found, an email has been sent to you.'),
+        form = forms.GetResetTokenForm(
+            request.POST,
         )
-        try:
-            account = models.Account.objects.get(email__iexact=email_address)
-            logic.start_reset_process(request, account)
-            return redirect(reverse('core_login'))
-        except models.Account.DoesNotExist:
-            return redirect(reverse('core_login'))
+        if form.is_valid():
+            email_address = form.cleaned_data.get("email_address")
+            messages.add_message(
+                request, 
+                messages.INFO,
+                _('If your account was found, an email has been sent to you.'),
+                )
+            try:
+                account = models.Account.objects.get(email__iexact=email_address)
+                logic.start_reset_process(request, account)
+                return redirect(reverse('core_login'))
+            except models.Account.DoesNotExist:
+                return redirect(reverse('core_login'))
 
-    template = 'core/accounts/get_reset_token.html'
+    template = 'admin/core/accounts/get_reset_token.html'
     context = {
         'new_reset_token': new_reset_token,
+        'form': form,
     }
 
     return render(request, template, context)
@@ -283,7 +297,7 @@ def reset_password(request, token):
             messages.add_message(request, messages.SUCCESS, 'Your password has been reset.')
             return redirect(reverse('core_login'))
 
-    template = 'core/accounts/reset_password.html'
+    template = 'admin/core/accounts/reset_password.html'
     context = {
         'reset_token': reset_token,
         'form': form,
@@ -299,15 +313,25 @@ def register(request):
     :param request: HttpRequest object
     :return: HttpResponse object
     """
+    context = {}
     initial = {}
     token, token_obj = request.GET.get('token', None), None
     if token:
         token_obj = get_object_or_404(models.OrcidToken, token=token)
         orcid_details = orcid.get_orcid_record_details(token_obj.orcid)
-        initial["first_name"] = orcid_details.get("first_name")
-        initial["last_name"] = orcid_details.get("last_name")
+        # we use the full orcid uri for display
+        context["orcid"] = orcid_details["uri"]
+        # but we save only the orcid (not uri) in the db
+        initial["orcid"] = orcid_details["orcid"]
+        initial["first_name"] = orcid_details.get("first_name", "")
+        initial["last_name"] = orcid_details.get("last_name", "")
         if orcid_details.get("emails"):
             initial["email"] = orcid_details["emails"][0]
+        if orcid_details.get("affiliation"):
+            initial['institution'] = orcid_details['affiliation']
+        if orcid_details.get("country"):
+            if models.Country.objects.filter(code=orcid_details['country']).exists():
+                initial["country"] = models.Country.objects.get(code=orcid_details['country'])
 
     form = forms.RegistrationForm(
         journal=request.journal,
@@ -328,9 +352,7 @@ def register(request):
 
         if form.is_valid():
             if token_obj:
-                new_user = form.save(commit=False)
-                new_user.orcid = token_obj.orcid
-                new_user.save()
+                new_user = form.save()
                 token_obj.delete()
                 # If the email matches the user email on ORCID, log them in
                 if new_user.email == initial.get("email"):
@@ -352,15 +374,13 @@ def register(request):
 
             messages.add_message(
                 request, messages.SUCCESS,
-                _('Your account has been created, please follow the'
+                _('Your account has been created. Please follow the '
                 'instructions in the email that has been sent to you.'),
             )
             return redirect(reverse('core_login'))
 
-    template = 'core/accounts/register.html'
-    context = {
-        'form': form,
-    }
+    template = 'admin/core/accounts/register.html'
+    context["form"] = form
 
     return render(request, template, context)
 
@@ -368,7 +388,7 @@ def register(request):
 def orcid_registration(request, token):
     token = get_object_or_404(models.OrcidToken, token=token, expiry__gt=timezone.now())
 
-    template = 'core/accounts/orcid_registration.html'
+    template = 'admin/core/accounts/orcid_registration.html'
     context = {
         'token': token,
     }
@@ -402,7 +422,7 @@ def activate_account(request, token):
 
         return redirect(reverse('core_login'))
 
-    template = 'core/accounts/activate_account.html'
+    template = 'admin/core/accounts/activate_account.html'
     context = {
         'account': account,
     }
@@ -520,12 +540,13 @@ def edit_profile(request):
         elif 'export' in request.POST:
             return logic.export_gdpr_user_profile(user)
 
-    template = 'core/accounts/edit_profile.html'
+    template = 'admin/core/accounts/edit_profile.html'
     context = {
         'form': form,
         'staff_group_membership_form': staff_group_membership_form,
         'user_to_edit': user,
         'send_reader_notifications': send_reader_notifications,
+        'user_is_reader': user.is_reader(request),
     }
 
     return render(request, template, context)
@@ -2411,6 +2432,21 @@ def manage_access_requests(request):
     )
 
 
+def sitemap(request, path_parts):
+    """
+    Renders an XML sitemap based on articles and pages available to the journal.
+    :param request: HttpRequest object
+    :param path_parts: List making up the sitemap path. ['journal', 'code', 'sitemap.xml']
+    :return: HttpResponse object
+    """
+    try:
+        return files.serve_sitemap_file(path_parts)
+    except FileNotFoundError:
+        logger.warning('Sitemap for {} not found.'.format(request.journal.name))
+
+    raise Http404()
+
+
 class GenericFacetedListView(generic.ListView):
     """
     This is a generic base class for creating filterable list views
@@ -2453,7 +2489,6 @@ class GenericFacetedListView(generic.ListView):
 
         context['facet_form'] = forms.CBVFacetForm(
             queryset=queryset,
-            facet_queryset=self.get_facet_queryset(),
             facets=facets,
             initial=initial,
         )
@@ -2500,11 +2535,9 @@ class GenericFacetedListView(generic.ListView):
                         queryset=self.queryset,
                     )
                     predicates = []
-                elif facets[keyword]['type'] == 'boolean':
-                    if value_list[0]:
-                        predicates = [(keyword, True)]
-                    else:
-                        predicates = [(keyword, False)]
+                elif facets[keyword]['type'] == 'boolean' and value_list[0] != '':
+                    # All = None, Yes = 1, No = 0
+                    predicates = [(f'{keyword}__exact', value_list[0])]
                 elif value_list[0]:
                     predicates = [(keyword, value) for value in value_list]
                 else:
@@ -2513,9 +2546,8 @@ class GenericFacetedListView(generic.ListView):
                 for predicate in predicates:
                     query |= Q(predicate)
                 q_stack.append(query)
-        self.queryset = self.filter_queryset_if_journal(
-            self.queryset.filter(*q_stack)
-        )
+        q_stack.append(self.get_journal_filter_query())
+        self.queryset = self.queryset.filter(*q_stack).distinct()
         return self.order_queryset(self.queryset)
 
     def order_queryset(self, queryset):
@@ -2526,9 +2558,15 @@ class GenericFacetedListView(generic.ListView):
             return queryset
 
     def get_order_by(self):
-        order_by = self.request.GET.get('order_by', '')
+        chosen_order_by = self.request.GET.get('order_by', '')
         order_by_choices = self.get_order_by_choices()
-        return order_by if order_by in dict(order_by_choices) else ''
+        if chosen_order_by in dict(order_by_choices):
+            return chosen_order_by
+        else:
+            try:
+                return order_by_choices[0][0]
+            except IndexError:
+                return ''
 
     def get_order_by_choices(self):
         """ Subclass must implement to allow ordering result set
@@ -2543,18 +2581,12 @@ class GenericFacetedListView(generic.ListView):
         return self.filter_facets_if_journal(facets)
 
     def get_facet_queryset(self):
-        # The default behavior is for the facets to stay the same
-        # when a filter is chosen.
-        # To make them change dynamically, return None
-        # instead of a separate facet.
-        # return None
-        queryset = self.filter_queryset_if_journal(
-            super().get_queryset()
+        # This method is deprecated.
+        warnings.warn(
+            ".get_facet_queryset() is deprecated and will"
+            " be removed. Use .get_queryset instead"
         )
-        facets = self.get_facets()
-        for facet in facets.values():
-            queryset = queryset.annotate(**facet.get('annotations', {}))
-        return queryset.order_by()
+        return self.get_queryset()
 
     def get_actions(self):
         return []
@@ -2606,11 +2638,11 @@ class GenericFacetedListView(generic.ListView):
         else:
             return [queryset]
 
-    def filter_queryset_if_journal(self, queryset):
+    def get_journal_filter_query(self):
         if self.request.journal and hasattr(self.model, 'journal'):
-            return queryset.filter(journal=self.request.journal)
+            return Q(journal=self.request.journal)
         else:
-            return queryset
+            return Q()
 
     def filter_facets_if_journal(self, facets):
         if self.request.journal:
@@ -2633,3 +2665,113 @@ class FilteredArticlesListView(GenericFacetedListView):
         raise DeprecationWarning(
             'This view is deprecated. Use GenericFacetedListView instead.'
         )
+
+
+@method_decorator(editor_user_required, name='dispatch')
+class BaseUserList(GenericFacetedListView):
+
+    model = core_models.Account
+    template_name = 'core/manager/users/list.html'
+
+    def get_facets(self):
+        facets = {
+            'q': {
+                'type': 'search',
+                'field_label': 'Search',
+            },
+            'is_active': {
+                'type': 'boolean',
+                'field_label': 'Active status',
+                'true_label': 'Active',
+                'false_label': 'Inactive',
+            },
+            'is_staff': {
+                'type': 'boolean',
+                'field_label': 'Staff member',
+                'true_label': 'Staff',
+                'false_label': 'Not staff',
+            },
+            'accountrole__role__pk': {
+                'type': 'foreign_key',
+                'model': models.Role,
+                'field_label': 'Role',
+                'choice_label_field': 'name',
+            },
+            'accountrole__journal__pk': {
+                'type': 'foreign_key',
+                'model': journal_models.Journal,
+                'field_label': 'Journal',
+                'choice_label_field': 'name',
+            },
+        }
+        return self.filter_facets_if_journal(facets)
+
+    def get_order_by_choices(self):
+        return [
+            ('-date_joined', _('Newest')),
+            ('date_joined', _('Oldest')),
+            ('last_name', _('Last name A-Z')),
+            ('-last_name', _('Last name Z-A')),
+        ]
+
+    def get_journal_filter_query(self):
+        if self.request.journal:
+            return Q(accountrole__journal=self.request.journal)
+        else:
+            return Q()
+
+    def filter_facets_if_journal(self, facets):
+        if self.request.journal:
+            facets.pop('accountrole__journal__pk', '')
+            facets.pop('is_staff', '')
+            return facets
+        else:
+            return facets
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        roles = models.Role.objects.exclude(slug='reader')
+        if not self.request.user.is_staff:
+            roles = roles.exclude(slug='journal-manager')
+        context['roles'] = roles
+
+        accountrole_form = forms.AccountRoleForm({
+            'journal': self.request.journal,
+        })
+        if self.request.journal:
+            accountrole_form.fields['journal'].widget.choices = [
+                (self.request.journal.pk, self.request.journal.name)
+            ]
+        else:
+            journal_names = core_models.SettingValue.objects.filter(
+                setting__group__name='general',
+                setting__name='journal_name',
+                journal__isnull=False,
+            ).order_by('value')
+            choices = [(None, '---------')]
+            choices.extend([(n.journal.pk, n.value) for n in journal_names])
+            accountrole_form.fields['journal'].widget.choices = choices
+        context['accountrole_form'] = accountrole_form
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+
+        if 'remove_accountrole' in request.POST:
+            accountrole = core_models.AccountRole.objects.get(
+                pk=request.POST.get('remove_accountrole')
+            )
+            message = f'{accountrole.role} role removed ' \
+                      f'from {accountrole.user} in {accountrole.journal.name}.'
+            accountrole.delete()
+            messages.success(request, message)
+        elif 'role' in request.POST:
+            form = forms.AccountRoleForm(request.POST)
+            if form.is_valid():
+                accountrole = form.save()
+                message = f'{accountrole.role} role added ' \
+                          f'for {accountrole.user} in {accountrole.journal.name}.'
+                messages.success(request, message)
+
+        return super().post(request, *args, **kwargs)

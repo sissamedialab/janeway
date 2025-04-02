@@ -17,6 +17,7 @@ from press import views as press_views
 from cms import views as cms_views
 from submission import views as submission_views
 from journal import views as journal_views
+from repository import views as repository_views
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -67,6 +68,11 @@ urlpatterns = [
         press_views.serve_press_file,
         name='serve_press_file',
         ),
+    re_path(
+        r'^press/user/all/$',
+        press_views.AllUsers.as_view(),
+        name='press_all_users',
+    ),
     re_path(r'^press/merge_users/$', press_views.merge_users, name='merge_users'),
     re_path(r'^doi_manager/$', press_views.IdentifierManager.as_view(), name='press_identifier_manager'),
 
@@ -204,7 +210,16 @@ urlpatterns = [
 
     re_path(r'^robots.txt$', press_views.robots, name='website_robots'),
     re_path(r'^sitemap.xml$', press_views.sitemap, name='website_sitemap'),
-    re_path(r'^(?P<issue_id>\d+)_sitemap.xml$', journal_views.sitemap, name='website_sitemap'),
+    re_path(
+        r'^issue/(?P<issue_id>\d+)_sitemap.xml$',
+        journal_views.sitemap,
+        name='journal_sitemap',
+    ),
+    re_path(
+        r'^subject/(?P<subject_id>\d+)_sitemap.xml$',
+        repository_views.sitemap,
+        name='repository_sitemap',
+    ),
 
     re_path(r'^download/file/(?P<file_id>\d+)/$', journal_views.download_journal_file, name='journal_file'),
 

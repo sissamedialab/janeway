@@ -451,6 +451,14 @@
         </ol>
     </xsl:template>
 
+    <xsl:template match="back/notes/fn-group">
+        <!-- Render note items as an ordered list -->
+        <xsl:element name="ol">
+            <xsl:attribute name="class">footnotes</xsl:attribute>
+            <xsl:apply-templates/>
+        </xsl:element>
+    </xsl:template>
+
   <xsl:template match="back/notes/title[1]">
     <!-- Render the first title of the notes as a top level article header -->
     <xsl:element name="h2">
@@ -2928,19 +2936,23 @@
    -->
     <xsl:choose>
       <xsl:when test="self::person-group/@person-group-type='author'"> 
-          <xsl:apply-templates select="node()" mode="none"/>            
+        <xsl:apply-templates select="node()" mode="none"/>
         <xsl:if test="not(preceding-sibling::person-group)">
-        <xsl:text> (</xsl:text>
-        <xsl:value-of select="..//year"/>
-        <xsl:text>).</xsl:text>
+          <xsl:if test="..//year">
+            <xsl:text> (</xsl:text>
+            <xsl:value-of select="..//year"/>
+            <xsl:text>).</xsl:text>
+          </xsl:if>
         </xsl:if>
       </xsl:when>
       <xsl:when test="self::person-group/@person-group-type='editor'">
-          <xsl:apply-templates select="node()" mode="none"/>
+        <xsl:apply-templates select="node()" mode="none"/>
         <xsl:if test="not(preceding-sibling::person-group)">
-        <xsl:text>. (</xsl:text>
-        <xsl:value-of select="..//year"/>
-        <xsl:text>).</xsl:text>
+          <xsl:if test="..//year">
+            <xsl:text>. (</xsl:text>
+            <xsl:value-of select="..//year"/>
+            <xsl:text>).</xsl:text>
+          </xsl:if>
         </xsl:if>
       </xsl:when>
       <xsl:otherwise>

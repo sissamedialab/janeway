@@ -54,6 +54,7 @@ from metrics.logic import ArticleMetrics
 from review import models as review_models
 from utils.function_cache import cache
 from utils.logger import get_logger
+from utils.forms import plain_text_validator
 from journal import models as journal_models
 from review.const import (
     ReviewerDecisions as RD,
@@ -225,6 +226,9 @@ LANGUAGE_CHOICES = (
     (u'yap', u'Yapese'), (u'yid', u'Yiddish'), (u'yor', u'Yoruba'), (u'ypk', u'Yupik languages'),
     (u'znd', u'Zande languages'), (u'zap', u'Zapotec'), (u'zza', u'Zaza; Dimili; Dimli; Kirdki; Kirmanjki; Zazaki'),
     (u'zen', u'Zenaga'), (u'zha', u'Zhuang; Chuang'), (u'zul', u'Zulu'), (u'zun', u'Zuni'))
+
+def get_jats_article_types():
+    return settings.JATS_ARTICLE_TYPES
 
 STAGE_UNSUBMITTED = 'Unsubmitted'
 STAGE_UNASSIGNED = 'Unassigned'
@@ -638,6 +642,17 @@ class Article(AbstractLastModifiedModel):
     language = models.CharField(max_length=200, blank=True, null=True, choices=LANGUAGE_CHOICES,
                                 help_text=_('The primary language of the article'))
     section = models.ForeignKey('Section', blank=True, null=True, on_delete=models.SET_NULL)
+    jats_article_type_override = DynamicChoiceField(max_length=255,
+                                                    dynamic_choices=get_jats_article_types(),
+                                                    choices=tuple(),
+                                                    blank=True, null=True,
+                                                    help_text="The type of article as per the JATS standard. This field allows you to override the default for the section.",
+                                                    default=None)
+
+    @property
+    def jats_article_type(self):
+        return self.jats_article_type_override or self.section.jats_article_type
+
     license = models.ForeignKey('Licence', blank=True, null=True, on_delete=models.SET_NULL)
     publisher_notes = models.ManyToManyField('PublisherNote', blank=True, null=True, related_name='publisher_notes')
 
@@ -904,15 +919,31 @@ class Article(AbstractLastModifiedModel):
     def has_galley(self):
         return self.galley_set.all().exists()
 
+    @staticmethod
+    @cache(600)
+    def publication_detail_settings(journal):
+        display_date_accepted = journal.get_setting(
+            group_name='article',
+            setting_name='display_date_accepted',
+        )
+        display_date_submitted = journal.get_setting(
+            group_name='article',
+            setting_name='display_date_submitted',
+        )
+        return display_date_submitted, display_date_accepted
+
     @property
     def has_publication_details(self):
         """Determines if an article has publication details override"""
+        display_date_submitted, display_date_accepted = self.publication_detail_settings(self.journal)
         return(
             self.page_range
             or self.article_number
             or self.publisher_name
             or self.publication_title
             or self.ISSN_override
+            or (display_date_submitted and self.date_submitted)
+            or (display_date_accepted and self.date_accepted)
         )
 
     @property
@@ -1119,7 +1150,7 @@ class Article(AbstractLastModifiedModel):
         if self.correspondence_author:
             return self.authors.exclude(pk=self.correspondence_author.pk)
         else:
-            return self.authors
+            return self.authors.all()
 
     def is_accepted(self):
         if self.date_published:
@@ -1402,6 +1433,11 @@ class Article(AbstractLastModifiedModel):
         else:
             return ", ".join([author.full_name() for author in self.authors.all()])
 
+    def bibtex_author_list(self):
+        return " AND ".join(
+            [author.full_name() for author in self.frozen_authors()],
+        )
+
     def keyword_list_str(self, separator=","):
         if self.keywords.exists():
             return separator.join(kw.word for kw in self.keywords.all())
@@ -1518,6 +1554,10 @@ class Article(AbstractLastModifiedModel):
         self.date_declined = timezone.now()
         self.date_accepted = None
         self.stage = STAGE_REJECTED
+
+        self.incomplete_reviews().update(decision=RD.DECISION_WITHDRAWN.value,
+                                         date_complete=timezone.now(),
+                                         is_complete=True,)
         self.save()
 
     def undo_review_decision(self):
@@ -1835,6 +1875,11 @@ class Article(AbstractLastModifiedModel):
             decision='withdrawn',
         )
 
+    def incomplete_reviews(self):
+        return self.reviewassignment_set.filter(is_complete=False,
+                                                date_declined__isnull=True,
+                                                decision__isnull=True)
+
     def ms_and_figure_files(self):
         return chain(self.manuscript_files.all(), self.data_figure_files.all())
 
@@ -1902,22 +1947,44 @@ class FrozenAuthor(AbstractLastModifiedModel):
     )
 
     name_prefix = models.CharField(
-        max_length=300, null=True, blank=True,
-        help_text=_("Optional name prefix (e.g: Prof or Dr)")
-
-        )
-    name_suffix = models.CharField(
-        max_length=300, null=True, blank=True,
-        help_text=_("Optional name suffix (e.g.: Jr or III)")
+        max_length=300,
+        blank=True,
+        help_text=_("Optional name prefix (e.g: Prof or Dr)"),
+        validators=[plain_text_validator],
     )
-    first_name = models.CharField(max_length=300, null=True, blank=True)
-    middle_name = models.CharField(max_length=300, null=True, blank=True)
-    last_name = models.CharField(max_length=300, null=True, blank=True)
+    name_suffix = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text=_("Optional name suffix (e.g.: Jr or III)"),
+        validators=[plain_text_validator],
+    )
+    first_name = models.CharField(
+        max_length=300,
+        blank=True,
+        validators=[plain_text_validator],
+    )
+    middle_name = models.CharField(
+            max_length=300,
+            blank=True,
+            validators=[plain_text_validator],
+    )
+    last_name = models.CharField(
+        max_length=300,
+        blank=True,
+        validators=[plain_text_validator],
+)
 
-    institution = models.CharField(max_length=1000, null=True, blank=True)
-    department = models.CharField(max_length=300, null=True, blank=True)
+    institution = models.CharField(
+        max_length=1000,
+        blank=True,
+        validators=[plain_text_validator],
+)
+    department = models.CharField(
+        max_length=300,
+        blank=True,
+        validators=[plain_text_validator],
+    )
     frozen_biography = JanewayBleachField(
-        null=True,
         blank=True,
         verbose_name=_('Frozen Biography'),
         help_text=_("The author's biography at the time they published"
@@ -1943,11 +2010,11 @@ class FrozenAuthor(AbstractLastModifiedModel):
     )
     frozen_email = models.EmailField(
             blank=True,
-            null=True,
             verbose_name=_("Author Email"),
     )
     frozen_orcid = models.CharField(
-        max_length=40, null=True, blank=True,
+        max_length=40,
+        blank=True,
         verbose_name=_('ORCiD'),
         help_text=_("ORCiD to be displayed when no account is"
                     " associated with this author. It should be introduced in code "
@@ -1976,7 +2043,6 @@ class FrozenAuthor(AbstractLastModifiedModel):
             self.name_suffix
         ]
         return " ".join([each for each in name_elements if each])
-        full_name = u"%s %s" % (self.first_name, self.last_name)
 
     @property
     def dc_name_string(self):
@@ -2095,6 +2161,12 @@ class Section(AbstractLastModifiedModel):
                   " overruling the notification settings for the journal.",
         related_name='section_editors',
     )
+    jats_article_type = DynamicChoiceField(max_length=255,
+                                           dynamic_choices=get_jats_article_types(),
+                                           choices=tuple(),
+                                           blank=True, null=True,
+                                           verbose_name="JATS default article type",
+                                           help_text="The default JATS article type for articles in this section. This can be overridden on a per-article basis.")
     auto_assign_editors = models.BooleanField(
         default=False,
         help_text="Articles submitted to this section will be automatically"

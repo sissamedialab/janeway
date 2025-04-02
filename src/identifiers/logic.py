@@ -339,7 +339,9 @@ def create_crossref_article_context(article, identifier=None):
         'date_accepted': article.date_accepted,
         'date_published': article.date_published,
         'license': article.license.url if article.license else '',
-        'pages': article.page_numbers,
+        'first_page': article.first_page,
+        'last_page': article.last_page,
+        'other_pages': article.page_numbers,
         'scheduled': article.scheduled_for_publication,
     }
 
@@ -388,7 +390,7 @@ def extract_citations_for_crossref(article):
                     "</cyear", "</cYear"
                 )
         except Exception as e:
-            logger.error('Error transforming Crossref citations: %s' % e)
+            logger.info('Error transforming Crossref citations: %s' % e)
     else:
         logger.debug('No XML galleys found for crossref citation extraction')
 

@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = 'Janeway'
-copyright = '2018, Andy Byers, Mauro Sanchez & Martin Paul Eve'
-author = 'Andy Byers, Mauro Sanchez & Martin Paul Eve'
+copyright = '2018-2024 Birkbeck, University of London'
+author = 'Open Library of Humanities'
 
 # The short X.Y version
-version = '1.6.0'
+version = '1.7.2'
 # The full version, including alpha/beta/rc tags
-release = '1.6.0-RC-2'
+release = '1.7.2'
 
 # -- General configuration ---------------------------------------------------
 
@@ -182,4 +182,4 @@ epub_exclude_files = ['search.html']
 # -- Extension configuration -------------------------------------------------
 
 def setup(app):
-    app.add_stylesheet('_static/css/custom.css')
+    app.add_css_file('_static/css/custom.css')

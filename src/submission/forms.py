@@ -77,8 +77,12 @@ class ArticleStart(forms.ModelForm):
 
     class Meta:
         model = models.Article
-        fields = ('publication_fees', 'submission_requirements', 'copyright_notice',
-                  'competing_interests')
+        fields = (
+            'publication_fees',
+            'submission_requirements',
+            'copyright_notice',
+            'competing_interests',
+        )
 
     def __init__(self, *args, **kwargs):
         journal = kwargs.pop('journal', False)
@@ -146,7 +150,7 @@ class ArticleInfo(KeywordModelForm, JanewayTranslationModelForm):
             'language', 'section', 'license', 'primary_issue',
             'article_number', 'is_remote', 'remote_url', 'peer_reviewed',
             'first_page', 'last_page', 'page_numbers', 'total_pages',
-            'competing_interests', 'custom_how_to_cite', 'rights',
+            'custom_how_to_cite', 'rights',
         )
         widgets = {
             'title': forms.TextInput(attrs={'placeholder': _('Title')}),
@@ -331,6 +335,11 @@ class EditorArticleInfoSubmit(ArticleInfo):
                                                "closed for public submission"
 
 
+class EditArticleMetadata(ArticleInfo):
+    class Meta(ArticleInfo.Meta):
+        fields = ArticleInfo.Meta.fields + ('competing_interests', 'jats_article_type_override')
+
+
 class AuthorForm(forms.ModelForm):
 
     class Meta:
@@ -411,7 +420,6 @@ class FileDetails(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(FileDetails, self).__init__(*args, **kwargs)
         self.fields['label'].required = True
-        self.fields['label'].inital = 'Manuscript'
 
 
 class EditFrozenAuthor(forms.ModelForm):
@@ -463,7 +471,7 @@ class EditFrozenAuthor(forms.ModelForm):
                 account = core_models.Account.objects.get(
                     username=obj.frozen_email.lower())
                 obj.author = account
-                obj.frozen_email = None
+                obj.frozen_email = ""  # linked account, don't store this value
             except core_models.Account.DoesNotExist:
                 pass
             obj.save()

@@ -112,7 +112,11 @@ class Repository(model_utils.AbstractSiteModel):
         help_text='eg. preprints or articles',
     )
     managers = models.ManyToManyField('core.Account', blank=True)
-    submission_notification_recipients = models.ManyToManyField('core.Account', blank=True, related_name='submission_notification_repositories')
+    submission_notification_recipients = models.ManyToManyField(
+        'core.Account',
+        blank=True,
+        related_name='submission_notification_repositories',
+    )
     logo = model_utils.SVGImageField(
         blank=True,
         null=True,
@@ -226,6 +230,15 @@ class Repository(model_utils.AbstractSiteModel):
         help_text='Describe any supporting information you want users to supply when requesting'
                   'access permissions for this repository. Linked to Limit Access to Submissions.',
     )
+    review_submission_text = model_utils.JanewayBleachField(
+        blank=True,
+        default="<p>Please review your submission carefully. Make any "
+                "necessary changes to ensure that all information is accurate "
+                "and complete.</p><p>When you are satisfied with your review "
+                "click the button below to finalize your submission.</p>",
+        help_text="Text that displays on the review page just before the "
+                  "author completes their submission."
+    )
     submission_access_contact = models.EmailField(
         blank=True,
         null=True,
@@ -241,6 +254,10 @@ class Repository(model_utils.AbstractSiteModel):
         blank=False,
         default='OLH',
         choices=theme_choices(),
+    )
+    display_public_metrics = models.BooleanField(
+        default=False,
+        help_text='Enable this setting to display metrics publicly.'
     )
 
     class Meta:
@@ -278,16 +295,17 @@ class Repository(model_utils.AbstractSiteModel):
             repository=self,
         )
 
-    def site_url(self, path=""):
+    def site_url(self, path="", query=''):
         if self.domain and not settings.URL_CONFIG == 'path':
             return logic.build_url(
                     netloc=self.domain,
                     scheme=self._get_scheme(),
                     port=None,
                     path=path,
+                    query=query,
             )
         else:
-            return self.press.site_path_url(self, path)
+            return self.press.site_path_url(self, path, query=query)
 
     @property
     def code(self):
@@ -343,7 +361,10 @@ class RepositoryField(models.Model):
     )
     required = models.BooleanField(default=True)
     order = models.IntegerField()
-    help_text = model_utils.JanewayBleachField(blank=True, null=True)
+    help_text = models.TextField(
+        blank=True,
+        null=True,
+    )
     display = models.BooleanField(
         default=False,
         help_text='Whether or not display this field in the article page',

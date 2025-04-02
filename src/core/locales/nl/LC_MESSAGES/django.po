@@ -389,7 +389,7 @@ msgstr ""
 
 #: src/core/views.py:355
 msgid ""
-"Your account has been created, please follow theinstructions in the email "
+"Your account has been created. Please follow the instructions in the email "
 "that has been sent to you."
 msgstr ""
 
@@ -2435,13 +2435,15 @@ msgstr ""
 msgid ""
 "All authors must agree to the below statements in order to submit an article "
 "to"
-msgstr ""
+msgstr "Alle auteurs moeten zich akkoord verklaren met onderstaande stellingen "
+"om een artikel te publiceren in"
 
 #: src/templates/admin/submission/start.html:24
 msgid ""
 "If you do not agree with these terms you will be unable to proceed with your "
 "submission."
-msgstr ""
+msgstr "Als je je niet akkoord verklaart met deze voorwaarden "
+"kan je niet verdergaan met deze inzending."
 
 #: src/templates/admin/submission/start.html:29
 msgid "Publication Fees"
@@ -3031,8 +3033,6 @@ msgstr "account"
 #: src/themes/clean/templates/core/accounts/reset_password.html:17
 #: src/themes/material/templates/core/accounts/register.html:20
 #: src/themes/material/templates/core/accounts/reset_password.html:17
-#, fuzzy
-#| msgid "Password Guide"
 msgid "Password Rules"
 msgstr "Wachtwoordgids"
 
@@ -3040,10 +3040,9 @@ msgstr "Wachtwoordgids"
 #: src/themes/clean/templates/core/accounts/register.html:20
 #: src/themes/material/templates/core/accounts/register.html:22
 #: src/themes/material/templates/core/accounts/reset_password.html:19
-#, fuzzy, python-format
-#| msgid "Your password must be {} characters long"
+#: src/templates/common/elements/password_rules.html:2
 msgid "Your password should be %(password_length)s characters long."
-msgstr "Uw wachtwoord moet {} karakters lang zijn"
+msgstr "Uw wachtwoord moet %(password_length)s karakters lang zijn"
 
 #: src/themes/OLH/templates/core/accounts/register.html:29
 #: src/themes/OLH/templates/core/accounts/reset_password.html:30
@@ -3051,9 +3050,8 @@ msgstr "Uw wachtwoord moet {} karakters lang zijn"
 #: src/themes/clean/templates/core/accounts/reset_password.html:20
 #: src/themes/material/templates/core/accounts/register.html:23
 #: src/themes/material/templates/core/accounts/reset_password.html:20
-#, fuzzy
-#| msgid "Your password should contain at least one upper case letter."
-msgid "Your password should contain at least one upper case letter.\""
+#: src/templates/common/elements/password_rules.html:2
+msgid "Your password should contain at least one upper case letter."
 msgstr "Uw wachtwoord moet minstens één hoofdletter bevatten."
 
 #: src/themes/OLH/templates/core/accounts/register.html:30
@@ -3062,18 +3060,15 @@ msgstr "Uw wachtwoord moet minstens één hoofdletter bevatten."
 #: src/themes/clean/templates/core/accounts/reset_password.html:21
 #: src/themes/material/templates/core/accounts/register.html:24
 #: src/themes/material/templates/core/accounts/reset_password.html:21
-#, fuzzy, python-format
-#| msgid "Your password should contain at least one number."
-msgid "Your password should contain at least one number.\" %%}"
+#: src/templates/common/elements/password_rules.html:2
+msgid "Your password should contain at least one number."
 msgstr "Uw wachtwoord moet minstens één nummer bevatten."
 
-#: src/themes/OLH/templates/core/accounts/register.html:32
+#: src/themes/OLH/templates/core/accounts/register.html:33
 msgid ""
-"For more information read our <a href=\"#\" data-open=\"password-modal"
-"\">password guide</a>."
+"For more information read our <a href=\"#\" data-open=\"password-modal\">password guide</a>."
 msgstr ""
-"Voor meer informatie lees onze <a href=\"#\" data-open=\"password-modal"
-"\">wachtwoord gids</a>."
+"Voor meer informatie lees onze <a href=\"#\" data-open=\"password-modal\">wachtwoord gids</a>."
 
 #: src/themes/OLH/templates/core/accounts/register.html:83
 #: src/themes/clean/templates/core/accounts/register.html:27
@@ -3618,7 +3613,7 @@ msgstr "Ook onderdeel van:"
 #: src/themes/OLH/templates/elements/journal/citation_modals.html:5
 #: src/themes/clean/templates/elements/journal/citation_modals.html:6
 #: src/themes/clean/templates/journal/article.html:294
-msgid "Harvard-Style Citation"
+msgid "Harvard-style Citation"
 msgstr "Harvard-stijl citatie"
 
 #: src/themes/OLH/templates/elements/journal/citation_modals.html:9
@@ -3643,7 +3638,7 @@ msgstr "APA citatie stijl"
 #: src/themes/OLH/templates/elements/journal/citation_modals.html:27
 #: src/themes/clean/templates/elements/journal/citation_modals.html:28
 #: src/themes/clean/templates/journal/article.html:295
-msgid "Vancouver-Style Citation"
+msgid "Vancouver-style Citation"
 msgstr "Vancouver-stijl citatie"
 
 #: src/themes/OLH/templates/elements/journal/citation_modals.html:40
@@ -3655,7 +3650,7 @@ msgstr "Harvard citatie stijl"
 #: src/themes/OLH/templates/elements/journal/citation_modals.html:49
 #: src/themes/clean/templates/elements/journal/citation_modals.html:49
 #: src/themes/clean/templates/journal/article.html:296
-msgid "APA-Style Citation"
+msgid "APA-style Citation"
 msgstr "APA-stijl citatie"
 
 #: src/themes/OLH/templates/elements/journal/editorial_social_content.html:4
@@ -4475,20 +4470,8 @@ msgstr ""
 
 #: src/themes/clean/templates/core/accounts/reset_password.html:23
 #: src/themes/material/templates/core/accounts/reset_password.html:23
-#, fuzzy
-#| msgid ""
-#| "For more information read our\n"
-#| "                        <a href=\"#passwordmodal\" class=\"modal-trigger"
-#| "\">password guide</a>\n"
-#| "                        ."
-msgid ""
-"For more information read our\n"
-"                                    <a href=\"#passwordmodal\" class=\"modal-"
-"trigger\">password guide</a>\n"
-"                                    ."
-msgstr ""
-"Voor meer informatie, lees onze <a href=\"#passwordmodal\" class=\"modal-"
-"trigger\">wachtwoordgids</a>."
+msgid "For more information read our <a href=\"#\" data-target=\"passwordmodal\" class=\"modal-trigger\">password guide</a>."
+msgstr "Voor meer informatie, lees onze <a href=\"#\" data-target=\"passwordmodal\" class=\"modal-trigger\">wachtwoordgids</a>."
 
 #: src/themes/clean/templates/core/accounts/reset_password.html:50
 msgid ""

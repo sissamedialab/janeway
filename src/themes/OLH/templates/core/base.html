@@ -12,11 +12,12 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no"/>
     <title>{% block title %}{{ request.journal.name }}{% endblock title %}</title>
     {% block head %}{% endblock head %}
     <link rel="sitemap" type="application/xml" title="Sitemap" href="{% url 'website_sitemap' %}">
     <link href="{% static "OLH/css/app.css" %}" rel="stylesheet">
-    <link href="{% static "common/css/common.css" %}" rel="stylesheet">
+    <link href="{% static "common/css/index.css" %}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
 
     {% if request.journal %}
@@ -42,15 +43,10 @@
         <link rel="alternate" type="application/rss+xml" title="Articles RSS Feed" href="{% url 'rss_articles' %}"/>
         <link  type="application/atom+xml" rel="alternate" title="News Feed for Journal" href="{% url 'rss_news' %}">
     {% endif %}
-
-    {% if request.journal and journal.favicon %}
-        <link rel="icon" href="{{ journal.favicon.url }}" type="image/vnd.microsoft.icon" />
-    {% elif request.press.favicon %}
-        <link rel="icon" href="{{ request.press.favicon.url }}" type="image/vnd.microsoft.icon" />
-    {% endif %}
-
+    {% include "common/elements/favicons.html" %}
 </head>
 <body>
+{% include "common/elements/skip_to_main_content.html" %}
 <div class="wrapper">
     <header class="main-header" role="banner">
         <div class="main top-bar">
@@ -171,7 +167,7 @@
         {% endblock navbar %}
     </header>
 
-    <main>
+    <main id="main-content">
         {% block body %}{% endblock body %}
     </main>
 </div>

@@ -8,6 +8,7 @@ import uuid
 import statistics
 import json
 from datetime import timedelta
+from django.utils.html import format_html
 import pytz
 from hijack.signals import hijack_started, hijack_ended
 import warnings
@@ -32,7 +33,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils.functional import cached_property
-from django.template.defaultfilters import linebreaksbr
+from django.template.defaultfilters import date
 import swapper
 
 from core import files, validators
@@ -42,6 +43,7 @@ from core.model_utils import (
     AbstractSiteModel,
     DynamicChoiceField,
     JanewayBleachField,
+    JanewayBleachCharField,
     PGCaseInsensitiveEmailField,
     SearchLookup,
     default_press_id,
@@ -51,6 +53,7 @@ from copyediting import models as copyediting_models
 from submission import models as submission_models
 from utils.logger import get_logger
 from utils import logic as utils_logic
+from utils.forms import plain_text_validator
 from production import logic as production_logic
 
 fs = JanewayFileSystemStorage()
@@ -233,23 +236,56 @@ class Account(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=254, unique=True, verbose_name=_('Username'))
 
     name_prefix = models.CharField(max_length=10, blank=True)
-    first_name = models.CharField(max_length=300, null=True, blank=False, verbose_name=_('First name'))
-    middle_name = models.CharField(max_length=300, null=True, blank=True, verbose_name=_('Middle name'))
-    last_name = models.CharField(max_length=300, null=True, blank=False, verbose_name=_('Last name'))
+    first_name = models.CharField(
+        max_length=300,
+        blank=False,
+        verbose_name=_('First name'),
+        validators=[plain_text_validator],
+    )
+    middle_name = models.CharField(
+        max_length=300,
+        blank=True,
+        verbose_name=_('Middle name'),
+        validators=[plain_text_validator],
+    )
+    last_name = models.CharField(
+        max_length=300,
+        blank=False,
+        verbose_name=_('Last name'),
+        validators=[plain_text_validator],
+    )
 
     activation_code = models.CharField(max_length=100, null=True, blank=True)
-    salutation = models.CharField(max_length=10, choices=SALUTATION_CHOICES, null=True, blank=True,
-                                  verbose_name=_('Salutation'))
+    salutation = models.CharField(
+        max_length=10,
+        choices=SALUTATION_CHOICES,
+        blank=True,
+        verbose_name=_('Salutation'),
+        validators=[plain_text_validator],
+    )
     suffix = models.CharField(
         max_length=300,
-        null=True,
         blank=True,
         verbose_name=_('Name suffix'),
+        validators=[plain_text_validator],
     )
-    biography = JanewayBleachField(null=True, blank=True, verbose_name=_('Biography'))
+    biography = JanewayBleachField(
+        blank=True,
+        verbose_name=_('Biography'),
+    )
     orcid = models.CharField(max_length=40, null=True, blank=True, verbose_name=_('ORCiD'))
-    institution = models.CharField(max_length=1000, null=True, blank=True, verbose_name=_('Institution'))
-    department = models.CharField(max_length=300, null=True, blank=True, verbose_name=_('Department'))
+    institution = models.CharField(
+        max_length=1000,
+        blank=True,
+        verbose_name=_('Institution'),
+        validators=[plain_text_validator],
+    )
+    department = models.CharField(
+        max_length=300,
+        blank=True,
+        verbose_name=_('Department'),
+        validators=[plain_text_validator],
+    )
     twitter = models.CharField(max_length=300, null=True, blank=True, verbose_name=_('Twitter Handle'))
     facebook = models.CharField(max_length=300, null=True, blank=True, verbose_name=_('Facebook Handle'))
     linkedin = models.CharField(max_length=300, null=True, blank=True, verbose_name=_('Linkedin Profile'))
@@ -259,7 +295,10 @@ class Account(AbstractBaseUser, PermissionsMixin):
     email_sent = models.DateTimeField(blank=True, null=True)
     date_confirmed = models.DateTimeField(blank=True, null=True)
     confirmation_code = models.CharField(max_length=200, blank=True, null=True, verbose_name=_("Confirmation Code"))
-    signature = JanewayBleachField(null=True, blank=True, verbose_name=_("Signature"))
+    signature = JanewayBleachField(
+        blank=True,
+        verbose_name=_("Signature"),
+    )
     interest = models.ManyToManyField('Interest', null=True, blank=True)
     country = models.ForeignKey(
         Country,
@@ -347,8 +386,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
 
     @property
     def first_names(self):
-        return '{0}{1}{2}'.format(self.first_name, ' ' if self.middle_name is not None else '',
-                                  self.middle_name if self.middle_name is not None else '')
+        return ' '.join([self.first_name, self.middle_name])
 
     def full_name(self):
         name_elements = [
@@ -504,6 +542,9 @@ class Account(AbstractBaseUser, PermissionsMixin):
             return True
 
         return False
+
+    def is_reader(self, request):
+        return self.check_role(request.journal, 'reader', staff_override=False)
 
     def snapshot_self(self, article, force_update=True):
         frozen_dict = {
@@ -667,6 +708,7 @@ class AccountRole(models.Model):
 
     class Meta:
         unique_together = ('journal', 'user', 'role')
+        ordering = ('journal', 'role')
 
     def __str__(self):
         return "{0} {1} {2}".format(self.user, self.journal, self.role.name)
@@ -1224,6 +1266,15 @@ class Galley(AbstractLastModifiedModel):
 
     def __str__(self):
         return "{0} ({1})".format(self.id, self.label)
+
+    def detail(self):
+        return format_html(
+            '{} galley linked to <a href="#file_{}">file {}: {}</a>',
+            self.label,
+            self.file.pk,
+            self.file.pk,
+            self.file.original_filename,
+        )
 
     def render(self, recover=False):
         return files.render_xml(

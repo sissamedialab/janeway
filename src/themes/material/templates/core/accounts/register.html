@@ -1,4 +1,8 @@
 {% extends "core/base.html" %}
+{% comment %}
+  This template is deprecated. Account pages are now part of the back-office.
+{% endcomment %}
+
 {% load materializecss %}
 {% load i18n %}
 {% load static %}
@@ -23,11 +27,10 @@
                         {% include "common/elements/password_rules.html" %}
                     </ul>
                     <p>
-                        {% blocktrans trimmed %}For more information read our
-                        <a href="#" data-target="passwordmodal" class="modal-trigger">password
-                            guide</a>.{% endblocktrans %}
+                        {% blocktrans trimmed %}For more information read our <a href="#" data-target="passwordmodal" class="modal-trigger">password guide</a>.{% endblocktrans %}
                     </p>
-                    <form method="POST">
+                        {% include "common/elements/orcid_registration.html" with button_classes="btn wide-button orcid-button" %}
+                        <form method="POST">
                         {% include "elements/forms/errors.html" %}
                         {% csrf_token %}
                         {{ form|materializecss }}
