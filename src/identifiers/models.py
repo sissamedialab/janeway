@@ -30,7 +30,7 @@ identifier_choices = (
     ('uri', 'URI Path'),
     ('pubid', 'Publisher ID'),
     ('arxiv', 'ArXiv ID'),
-    ('preprintid', 'preprintId'),
+    ('preprintid', 'Preprint ID'),
 )
 
 IDENTIFIER_TYPES = {
