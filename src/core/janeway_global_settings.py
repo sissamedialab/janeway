@@ -680,3 +680,6 @@ TINYMCE_DEFAULT_CONFIG = {
         "| a11ycheck ltr rtl | code",
     **TINYMCE_CLIPBOARD_CLEANER,
 }
+
+# Enable hierarchical structure for keywords during submission.
+ENABLE_HIERARCHICAL_KEYWORDS = False
