@@ -148,5 +148,9 @@ run-tests-on-security-updates:
     - export CI_PROJECT_DIR="$(pwd)"
 
   after_script:
+    # list installed packages,
+    # so that one can verify on what we were working
+    - pip list
+
     # reset the modified ci/cd variables
     - export CI_PROJECT_DIR="$OLD"
