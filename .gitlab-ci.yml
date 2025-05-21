@@ -19,6 +19,7 @@ include:
     ref: wjs-develop
     file: '.gitlab-ci-run-tests.yml'
 
+
 deploy_to_test:
   extends:
     - .deploy
@@ -32,8 +33,9 @@ deploy_to_test:
     name: development
     url: https://wjs-test-test-journals.wjapp.it/
   rules:
-    - if: '$CI_COMMIT_BRANCH == "wjs-develop" || $CI_COMMIT_BRANCH == "feature/issue-1281-merge-janeway-17"'
-  when: manual
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+      when: on_success
+    - when: manual
 
 
 deploy_to_dev:
@@ -50,6 +52,9 @@ deploy_to_dev:
     url: https://wjs-test-dev-journals.wjapp.it/
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
+      when: on_success
+    - when: manual
+
 
 deploy_to_pp:
   extends:
@@ -63,7 +68,10 @@ deploy_to_pp:
   environment:
     name: pre-production
     url: https://wjs-test-pp-journals.wjapp.it/
-  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+      when: on_success
+    - when: manual
 
 
 deploy_to_production:
@@ -78,7 +86,9 @@ deploy_to_production:
   environment:
     name: production
     url: https://journals.sissamedialab.it/
-  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+      when: manual
 
 
 .build_janeway_image:
@@ -122,6 +132,7 @@ build_janeway_image_wjs_develop:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
+
 
 
 # Do not use to test changes to Janeway code!
