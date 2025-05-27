@@ -3,6 +3,7 @@ from django.forms import (
     CharField,
     CheckboxInput,
     ModelForm,
+    ModelMultipleChoiceField,
     DateInput,
     HiddenInput,
     Form,
@@ -11,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
+from dal_select2.widgets import ModelSelect2Multiple
 from modeltranslation import forms as mt_forms, translator
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Checkbox as ReCaptchaWidget
@@ -61,35 +63,56 @@ class KeywordModelForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance.pk:
-            current_keywords = self.instance.keywords.values_list(
-                "word", flat=True)
-            field = self.fields["keywords"]
-            field.initial = ",".join(current_keywords)
+        journal = getattr(self.instance, 'journal', self.instance)
+        if journal and journal.submissionconfiguration.hierarchical_keywords:
+            self.fields['keywords'] = ModelMultipleChoiceField(
+                queryset=submission_models.Keyword.objects.all(),
+                required=False,
+                widget=ModelSelect2Multiple(
+                    url='keyword-autocomplete',
+                    attrs={
+                        'data-placeholder': _('Type to search...'),
+                        'data-minimum-input-length': 1,
+                        'data-width': '100%',
+                    }
+                )
+            )
+            if self.instance.pk:
+                self.fields['keywords'].initial = self.instance.keywords.all()
+        else:
+            if self.instance.pk:
+                current_keywords = self.instance.keywords.values_list(
+                    "word", flat=True)
+                field = self.fields["keywords"]
+                field.initial = ",".join(current_keywords)
 
     def save(self, commit=True, *args, **kwargs):
         posted_keywords = self.cleaned_data.get( 'keywords', '')
 
         instance = super().save(commit=commit, *args, **kwargs)
         instance.keywords.clear()
-
+        journal = getattr(instance, 'journal', instance)
         if posted_keywords:
-            keyword_list = posted_keywords.split(",")
-            for i, keyword in enumerate(keyword_list):
-                # Ref: https://gitlab.sissamedialab.it/wjs/specs/-/issues/396
-                # FIXME: temporary workaround until we change the keyword selection widget to allow selecting keywords
-                # As the keyword is multi-lingual, we must turn off modeltranslation rewrite (ie: the ORM will match
-                # the default language) because when saving, the current language selected in the tab is activated on
-                # django and modeltranslation will try to get/create the keyword in the current language
-                # but the form contains the english version of the keyword
-                # eg: if spanish is activated with rewrite=True (default) the query is equivalent to
-                # - Keyword.objects.get_or_create(word_es=keyword) -> English version of the keyword is of course not
-                #   found
-                # if spanish is activated with rewrite=False the query is equivalent to
-                # - Keyword.objects.get_or_create(word_en=keyword) -> English version of the keyword is matched
-                obj, _ = submission_models.Keyword.objects.rewrite(False).get_or_create(
-                    word=keyword)
-                instance.keywords.add(obj)
+            if journal and journal.submissionconfiguration.hierarchical_keywords:
+                for keyword in posted_keywords:
+                    self.instance.keywords.add(keyword)
+            else:
+                keyword_list = posted_keywords.split(",")
+                for i, keyword in enumerate(keyword_list):
+                    # Ref: https://gitlab.sissamedialab.it/wjs/specs/-/issues/396
+                    # FIXME: temporary workaround until we change the keyword selection widget to allow selecting keywords
+                    # As the keyword is multi-lingual, we must turn off modeltranslation rewrite (ie: the ORM will match
+                    # the default language) because when saving, the current language selected in the tab is activated on
+                    # django and modeltranslation will try to get/create the keyword in the current language
+                    # but the form contains the english version of the keyword
+                    # eg: if spanish is activated with rewrite=True (default) the query is equivalent to
+                    # - Keyword.objects.get_or_create(word_es=keyword) -> English version of the keyword is of course not
+                    #   found
+                    # if spanish is activated with rewrite=False the query is equivalent to
+                    # - Keyword.objects.get_or_create(word_en=keyword) -> English version of the keyword is matched
+                    obj, _ = submission_models.Keyword.objects.rewrite(False).get_or_create(
+                        word=keyword)
+                    instance.keywords.add(obj)
         if commit:
             instance.save()
         return instance
