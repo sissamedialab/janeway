@@ -6,6 +6,7 @@
 {% block title-section %}{% trans "Article Info" %}{% endblock %}
 {% block css %}
     <link href="{% static 'admin/css/timeline.css' %}" rel="stylesheet">
+    {{ form.media.css }}
 {% endblock %}
 
 {% block head %}
@@ -132,4 +133,6 @@
                 {allowSpaces: true});
         });
     </script>
+
+    {{ form.media.js }}
 {% endblock %}
