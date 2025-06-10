@@ -2376,6 +2376,7 @@ class SubmissionConfiguration(models.Model):
     language = models.BooleanField(default=True)
     license = models.BooleanField(default=True)
     keywords = models.BooleanField(default=True)
+    autocomplete_keywords = models.BooleanField(default=False)
     hierarchical_keywords = models.BooleanField(default=False)
     section = models.BooleanField(default=True)
     funding = models.BooleanField(default=False)
