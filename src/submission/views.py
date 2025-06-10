@@ -1133,6 +1133,13 @@ def configurator(request):
 
 
 class KeywordAutocomplete(autocomplete.Select2QuerySetView):
+
+    @property
+    def create_field(self):
+        if not self.request.journal.submissionconfiguration.hierarchical_keywords:
+            return 'word'
+        return None
+
     def get_queryset(self):
         qs = models.Keyword.objects.all()
         if self.q:
