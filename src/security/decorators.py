@@ -801,7 +801,8 @@ def article_edit_user_required(func):
         article = models.Article.get_article(request.journal, 'id', article_id)
 
         if (not request.user.is_staff and
-                not request.user == article.correspondence_author):
+                not request.user == article.correspondence_author and
+                not request.user == article.owner):
             deny_access(request)
 
         if article.can_edit(request.user):
