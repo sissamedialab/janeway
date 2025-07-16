@@ -9,7 +9,7 @@
                     </p>
                     <p>
                         <small><i>
-                            {% for author in preprint.authors.all %}{{ author.full_name }}{% if not forloop.last %},
+                            {% for author in preprint.articleauthororder_set.all %}{{ author.full_name }}{% if not forloop.last %},
                             {% endif %}{% endfor %}</i></small>
                     </p>
                     <p>

@@ -28,13 +28,13 @@
                     <h5>{% trans "Authors" %}</h5>
                     <p>
                         <small>
-                            {% for author in article.authors.all %}
+                            {% for author in article.articleauthororder_set.all %}
                                 {% if forloop.last %}
-                                    {% if article.authors.all|length > 1 %} &{% endif %}
+                                    {% if article.articleauthororder_set.all|length > 1 %} &{% endif %}
                                 {% endif %}
                                 {{ author.full_name }}
                                 {% if not forloop.last %}
-                                    {% if not forloop.counter == article.authors.all|length|add:-1 %},
+                                    {% if not forloop.counter == article.articleauthororder_set.all|length|add:-1 %},
                                     {% endif %}
                                 {% endif %}
                             {% endfor %}

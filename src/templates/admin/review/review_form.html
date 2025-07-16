@@ -121,7 +121,7 @@
                                 <th>Institution</th>
                                 <th>Department</th>
                             </tr>
-                            {% for author in assignment.article.authors.all %}
+                            {% for author in assignment.article.articleauthororder_set.all %}
                                 <tr>
                                     <td>{{ author.full_name }}</td>
                                     <td>{{ author.institution }}</td>

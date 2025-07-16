@@ -94,7 +94,7 @@
                         <label for="main-author">{% trans "Select main author" %}:</label>
                         <select class="form-control" id="main-author" name="main-author">
                             <option value="None">---------</option>
-                            {% for author in article.authors.all %}
+                            {% for author in article.articleauthororder_set.all %}
                                 <option value="{{ author.pk }}"
                                         {% if article.correspondence_author.pk == author.pk %}selected{% endif %}>{{ author.full_name }}</option>
                             {% endfor %}

@@ -14,7 +14,7 @@
 
     <article>
         <div class="large-12 columns">
-            {% for author in article.authors.all %}
+            {% for author in article.articleauthororder_set.all %}
                 {% if author.biography %}
                     <div class="dropdown-pane author-info" data-dropdown id="author{{ forloop.counter }}" data-hover="true"
                          data-hover-pane="true">
@@ -32,7 +32,7 @@
                                 <p>{{ article.abstract | safe }}</p>
                                 <p><strong>Keywords:</strong> TODO: keywords</p>
                                 <p><strong>How to Cite:</strong>
-                                    {% for author in article.authors.all %}{{ author.last_name }},
+                                    {% for author in article.articleauthororder_set.all %}{{ author.last_name }},
                                         {{ author.first_name|slice:"1" }}{% if forloop.last %}.{% else %},
                                         {% endif %} {% endfor %}
                                     ({{ article.date_published.year }}) '{{ article.safe_title }}',
@@ -55,7 +55,7 @@
     <div id="HarvardModal" class="reveal" data-reveal aria-labelledby="HarvardModalTitle" aria-hidden="true"
          role="dialog">
         <h2 id="HarvardModalTitle">Harvard-style Citation</h2>
-        <p>{% for author in article.authors.all %}{{ author.last_name }},
+        <p>{% for author in article.articleauthororder_set.all %}{{ author.last_name }},
             {{ author.first_name|slice:"1" }}{% if forloop.last %}.{% else %},{% endif %} {% endfor %}
             ({{ article.date_published.year }}) '{{ article.safe_title }}',
             <i>{{ journal.name }}</i>. 0(0):{{ article.page_range }}.
@@ -70,7 +70,7 @@
     <div id="VancouverModal" class="reveal" data-reveal aria-labelledby="VancouverModalTitle" aria-hidden="true"
          role="dialog">
         <h2 id="VancouverModalTitle">Vancouver-style Citation</h2>
-        <p>{% for author in article.authors.all %}{{ author.last_name }},
+        <p>{% for author in article.articleauthororder_set.all %}{{ author.last_name }},
             {{ author.first_name|slice:"1" }}{% if forloop.last %}.{% else %},{% endif %} {% endfor %}
             {{ article.safe_title }}. {{ journal.name }}. {{ article.date_published.year }} {{ article.date_published.month }};0(0):{{ article.page_range }}.
             doi: {{ article.identifier.identifier }}</p>
@@ -84,7 +84,7 @@
     <div id="APAModal" class="reveal" data-reveal aria-labelledby="APAModalTitle" aria-hidden="true"
          role="dialog">
         <h2 id="APAModalTitle">APA-style Citation</h2>
-        <p>{% for author in article.authors.all %}{% if forloop.last and not forloop.first %}
+        <p>{% for author in article.articleauthororder_set.all %}{% if forloop.last and not forloop.first %}
             &amp; {% endif %}{{ author.last_name }},
             {{ author.first_name|slice:"1" }}{% if forloop.last %}.{% else %},{% endif %} {% endfor %}
             ({{ article.date_published.year }}, {{ article.date_published.month }} {{ article.date_published.day }}). {{ article.safe_title }}.

@@ -2,7 +2,7 @@
 {% load hooks %}
 {% load i18n %}
 <html>
-<title>{{ article.authors.all.0.last_name | striptags }} | {{ article.title | striptags }}
+<title>{{ article.articleauthororder_set.all.0.last_name | striptags }} | {{ article.title | striptags }}
     |{{ journal_settings.general.journal_name | striptags }} </title>
 
 <head>
