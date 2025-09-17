@@ -69,7 +69,7 @@ deploy_to_pp:
     name: pre-production
     url: https://wjs-test-pp-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: $CI_COMMIT_BRANCH == "wjs-production"
       when: on_success
     - when: manual
 
@@ -87,8 +87,9 @@ deploy_to_production:
     name: production
     url: https://journals.sissamedialab.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: $CI_COMMIT_BRANCH == "wjs-production" && '$CI_COMMIT_TAG'
       when: manual
+    - when: never
 
 
 .build_janeway_image:
