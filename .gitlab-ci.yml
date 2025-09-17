@@ -11,6 +11,13 @@ stages:
   - deploy
 
 
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - when: always
+
+
 include:
   - project: 'wjs/wjs-profile-project'
     ref: wjs-develop
@@ -133,6 +140,22 @@ build_janeway_image_wjs_develop:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
+      when: on_success
+    - if: $CI_COMMIT_BRANCH != "wjs-develop"
+      when: manual
+      allow_failure: true
+
+build_janeway_image_wjs_production:
+  extends:
+    - .build_janeway_image
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:production"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "wjs-production"
+      when: on_success
+    - if: $CI_COMMIT_BRANCH != "wjs-production"
+      when: manual
+      allow_failure: true
 
 
 
