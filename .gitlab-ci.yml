@@ -137,7 +137,7 @@ build_janeway_image_wjs_develop:
   extends:
     - .build_janeway_image
   variables:
-    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:mario"
   rules:
     - if: $CI_COMMIT_BRANCH == "wjs-develop"
       when: on_success
