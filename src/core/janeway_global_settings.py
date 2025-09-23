@@ -72,6 +72,8 @@ INSTALLED_APPS = [
     'core',
     'copyediting',
     'cron',
+    'dal',
+    'dal_select2',
     'discussion',
     'events',
     'identifiers',
@@ -713,3 +715,4 @@ JATS_ARTICLE_TYPES = (
     ("translation", ("Translation")),
     ("other", "Other")
 )
+
