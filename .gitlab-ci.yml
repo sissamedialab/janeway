@@ -11,6 +11,15 @@ stages:
   - deploy
 
 
+workflow:
+  rules:
+    # Do not run branch pipelines if there is an open merge request.
+    # This is to avoid duplicate pipelines, so only the MR pipeline will run.
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - when: always
+
+
 include:
   - project: 'wjs/wjs-profile-project'
     ref: wjs-develop
@@ -33,7 +42,7 @@ deploy_to_test:
     name: development
     url: https://wjs-test-test-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: $CI_COMMIT_REF_NAME == "wjs-develop"
       when: on_success
     - when: manual
 
@@ -51,7 +60,7 @@ deploy_to_dev:
     name: development
     url: https://wjs-test-dev-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: $CI_COMMIT_REF_NAME == "wjs-develop"
       when: on_success
     - when: manual
 
@@ -69,7 +78,7 @@ deploy_to_pp:
     name: pre-production
     url: https://wjs-test-pp-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: $CI_COMMIT_REF_NAME == "wjs-production"
       when: on_success
     - when: manual
 
@@ -87,8 +96,9 @@ deploy_to_production:
     name: production
     url: https://journals.sissamedialab.it/
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: $CI_COMMIT_REF_NAME == "wjs-production"
       when: manual
+    - when: never
 
 
 .build_janeway_image:
@@ -122,7 +132,7 @@ deploy_to_production:
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker pull $TAG || true
-    - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --build-arg BRANCH=$CI_COMMIT_BRANCH --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
+    - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --build-arg BRANCH=$CI_COMMIT_REF_NAME --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
     - docker push $TAG
 
 build_janeway_image_wjs_develop:
@@ -131,7 +141,23 @@ build_janeway_image_wjs_develop:
   variables:
     TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:develop"
   rules:
-    - if: $CI_COMMIT_BRANCH == "wjs-develop"
+    - if: $CI_COMMIT_REF_NAME == "wjs-develop"
+      when: on_success
+    - if: $CI_COMMIT_REF_NAME != "wjs-develop"
+      when: manual
+      allow_failure: true
+
+build_janeway_image_wjs_production:
+  extends:
+    - .build_janeway_image
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:production"
+  rules:
+    - if: $CI_COMMIT_REF_NAME == "wjs-production"
+      when: on_success
+    - if: $CI_COMMIT_REF_NAME != "wjs-production"
+      when: manual
+      allow_failure: true
 
 
 

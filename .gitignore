@@ -150,3 +150,4 @@ src/utils/management/commands/test_command.py
 jenkins/test-results
 
 .python-versionsrc/*.csv
+.aider*
