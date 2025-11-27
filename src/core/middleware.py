@@ -4,7 +4,7 @@ __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 from uuid import uuid4
-import threading
+from contextvars import ContextVar
 
 import pytz
 
@@ -210,18 +210,17 @@ class PressMiddleware(BaseMiddleware):
                     else:
                         raise Http404('Press cannot access this page.')
 
-
-_threadlocal = threading.local()
+_request = ContextVar("request", default=None)
 
 
 class GlobalRequestMiddleware(BaseMiddleware):
     @classmethod
     def get_current_request(cls):
-        return _threadlocal.request
+        return _request.get()
 
     @staticmethod
     def process_request(request):
-        _threadlocal.request = request
+        _request.set(request)
 
 
 class TimezoneMiddleware(BaseMiddleware):
