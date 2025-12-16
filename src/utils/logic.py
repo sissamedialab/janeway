@@ -132,8 +132,8 @@ def build_url_for_request(request=None, path="", query=None, fragment=""):
         request = get_current_request()
 
     return build_url(
-        netloc=request.get_host(),
-        scheme=request.scheme,
+        netloc=request.get_host() if request else "",
+        scheme=request.scheme if request else "",
         path=path,
         query=query,
         fragment=fragment,
@@ -144,7 +144,7 @@ def replace_netloc_port(netloc, new_port):
     return ":".join((netloc.split(":")[0], new_port))
 
 
-def build_url(netloc, port=None, scheme=None, path="", query=None, fragment=""):
+def build_url(netloc, port=None, scheme="", path="", query=None, fragment=""):
     """ Builds a url given all its parts
     :netloc: string
     :port: int
@@ -164,10 +164,13 @@ def build_url(netloc, port=None, scheme=None, path="", query=None, fragment=""):
     elif query and isinstance(query, dict):
         query = urlencode(query, safe='/')
 
-    if scheme is None:
-        scheme = GlobalRequestMiddleware.get_current_request().scheme
+    if not scheme:
+        try:
+            scheme = GlobalRequestMiddleware.get_current_request().scheme
+        except (KeyError, AttributeError):
+            scheme = ""
 
-    if port is not None:
+    if port is not None and netloc:
         netloc = replace_netloc_port(netloc, port)
 
     return SplitResult(
