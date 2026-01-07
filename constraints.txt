@@ -1,5 +1,5 @@
-# GHSA-9548-qrrj-x5pj
-aiohttp~=3.12.14
+# GHSA-6mq8-rvhq-8wgg et al.
+aiohttp~=3.13.3
 # GHSA-h4gh-qq45-vh27 GHSA-79v4-65xg-pq4g
 cryptography~=44.0.1
 # GHSA-5rjg-fvgr-3xxf
