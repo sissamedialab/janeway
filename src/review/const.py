@@ -13,7 +13,7 @@ class EditorialDecisions(EnumContains):
     MAJOR_REVISIONS = "major_revisions"
     CONDITIONAL_ACCEPT = "conditional_accept"
     REVIEW = "review"
-
+    TECHNICAL_REVISIONS = "tech_revisions"
 
 class ReviewerDecisions(EnumContains):
     DECISION_ACCEPT = "accept"
