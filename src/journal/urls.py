@@ -98,6 +98,10 @@ urlpatterns = [
         views.download_issue_galley,
         name="journal_issue_download_galley",
     ),
+    re_path(r"^issue/(?P<issue_id>\d+)/download/(?P<file_id>\d+)/documents$",
+        views.download_issue_document,
+        name="journal_issue_download_document"
+    ),
     re_path(r"^collections/$", views.collections, name="journal_collections_type"),
     re_path(
         r"^collections/(?P<collection_id>\d+)/$",
@@ -220,8 +224,11 @@ urlpatterns = [
         views.issue_add_article,
         name="issue_add_article",
     ),
-    re_path(
-        r"^manage/issues/(?P<issue_id>\d+)/galley/$",
+    re_path(r"^manage/issues/(?P<issue_id>\d+)/(?P<file_id>\d+)/(?P<document_type>\w+)/$",
+        views.issue_galley,
+        name="issue_galley"
+    ),
+    re_path(r"^manage/issues/(?P<issue_id>\d+)/(?P<document_type>(galley|document))/$",
         views.issue_galley,
         name="issue_galley",
     ),

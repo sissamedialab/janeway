@@ -29,6 +29,7 @@ from core.forms import (
     OrcidAffiliationForm,
     OrganizationNameForm,
 )
+from journal.models import Issue
 from repository import models as preprint_models
 from security.decorators import (
     production_user_or_editor_required,
@@ -38,7 +39,7 @@ from security.decorators import (
     article_is_not_submitted,
     role_can_access,
     user_can_edit_author,
-    user_can_edit_article,
+    user_can_edit_article, article_edit_user_required,
 )
 from submission import forms, models, logic, decorators
 from events import logic as event_logic
@@ -88,15 +89,54 @@ def start(request, type=None):
                 **{"request": request, "article": new_article},
             )
 
-            return redirect(
-                reverse(
-                    "submit_info",
-                    kwargs={"article_id": new_article.pk},
-                ),
-            )
+            user_has_issues = Issue.objects.for_submission(user=request.user, journal=request.journal).exists()
+            if user_has_issues:
+                return redirect(reverse('submit_issue', kwargs={'article_id': new_article.pk}))
+            else:
+                return redirect(
+                    reverse(
+                        "submit_info",
+                        kwargs={"article_id": new_article.pk},
+                    ),
+                )
 
     template = "admin/submission/start.html"
     context = {"form": form}
+
+    return render(request, template, context)
+
+
+@login_required
+@decorators.submission_is_enabled
+@article_is_not_submitted
+@article_edit_user_required
+@submission_authorised
+def submit_issue(request, article_id):
+    """
+    Select primary issue for the article, if issue selection is active.
+
+    :param request: HttpRequest object
+    :param article_id: int, None or "preprint"
+    :return: HttpRedirect or HttpResponse
+    """
+    user_has_issues = Issue.objects.for_submission(user=request.user, journal=request.journal).exists()
+    if not user_has_issues:
+        return redirect(reverse("submit_info", kwargs={"article_id": article_id}))
+    article = get_object_or_404(models.Article, pk=article_id)
+
+    if request.POST:
+        form = forms.SelectIssueForm(journal=request.journal, user=request.user, data=request.POST, instance=article)
+        if form.is_valid():
+            article = form.save(commit=False)
+            article.journal = request.journal
+            article.current_step = 2
+            article.save()
+            return redirect(reverse("submit_info", kwargs={"article_id": article_id}))
+    else:
+        form = forms.SelectIssueForm(journal=request.journal, user=request.user, instance=article)
+
+    template = "admin/submission/submit_issue.html"
+    context = {"form": form, "article": article}
 
     return render(request, template, context)
 
@@ -220,11 +260,12 @@ def submit_info(request, article_id):
                 additional_fields=additional_fields,
                 submission_summary=submission_summary,
                 journal=request.journal,
+                keep_primary_issue=True
             )
             if form.is_valid():
                 form.save(request=request)
 
-                article.current_step = 2
+                article.current_step = 3
                 article.save()
 
                 return redirect(
@@ -280,7 +321,7 @@ def submit_authors(request, article_id):
         journal=request.journal,
     )
 
-    if article.current_step < 2 and not request.user.is_staff:
+    if article.current_step < 3 and not request.user.is_staff:
         return redirect(reverse("submit_info", kwargs={"article_id": article_id}))
 
     new_author_form = forms.EditFrozenAuthor()
@@ -312,7 +353,7 @@ def submit_authors(request, article_id):
                     reverse("submit_authors", kwargs={"article_id": article_id})
                 )
 
-            article.current_step = 3
+            article.current_step = 4
             article.save()
             return redirect(reverse("submit_files", kwargs={"article_id": article_id}))
 
@@ -644,7 +685,7 @@ def submit_files(request, article_id):
     )
     configuration = request.journal.submissionconfiguration
 
-    if article.current_step < 3 and not request.user.is_staff:
+    if article.current_step < 4 and not request.user.is_staff:
         return redirect(reverse("submit_authors", kwargs={"article_id": article_id}))
 
     error, modal = None, None
@@ -707,7 +748,7 @@ def submit_files(request, article_id):
 
         if "next_step" in request.POST:
             if article.manuscript_files.all().count() >= 1:
-                article.current_step = 4
+                article.current_step = 5
                 article.save()
                 if configuration.funding:
                     return redirect(
@@ -752,7 +793,7 @@ def submit_review(request, article_id):
         journal=request.journal,
     )
 
-    if article.current_step < 4 and not request.user.is_staff:
+    if article.current_step < 5 and not request.user.is_staff:
         return redirect(
             reverse(
                 "submit_info",
@@ -772,7 +813,7 @@ def submit_review(request, article_id):
             form.save()
             article.date_submitted = timezone.now()
             article.stage = models.STAGE_UNASSIGNED
-            article.current_step = 5
+            article.current_step = 6
             article.save()
 
             event_logic.Events.raise_event(
