@@ -5,17 +5,18 @@ def handler404(request, *args, **argv):
     template = "404.html"
     context = {}
     return render(
-        request,
-        template,
-        context,
+        request=request,
+        template_name=template,
+        context=context,
         status=404,
     )
 
 
 def handler500(request, *args, **argv):
     response = render(
-        None,
-        "500.html",
+        request=request,
+        template_name='500.html',
+        status=500,
+
     )
-    response.status_code = 404
     return response

@@ -2,6 +2,7 @@ __copyright__ = "Copyright 2017 Birkbeck, University of London"
 __author__ = "Martin Paul Eve & Andy Byers"
 __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
+from _contextvars import ContextVar
 
 from uuid import uuid4
 import threading
@@ -241,17 +242,17 @@ class PressMiddleware(BaseMiddleware):
                         raise Http404("Press cannot access this page.")
 
 
-_threadlocal = threading.local()
+_request = ContextVar("request", default=None)
 
 
 class GlobalRequestMiddleware(BaseMiddleware):
     @classmethod
     def get_current_request(cls):
-        return _threadlocal.request
+        return _request.get()
 
     @staticmethod
     def process_request(request):
-        _threadlocal.request = request
+        request.set(request)
 
 
 class TimezoneMiddleware(BaseMiddleware):
