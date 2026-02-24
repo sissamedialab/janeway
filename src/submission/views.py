@@ -6,6 +6,7 @@ __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 import json
 import warnings
 
+from dal import autocomplete
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -1679,3 +1680,18 @@ def affiliation_update_from_orcid(
         "new_affils": new_affils,
     }
     return render(request, template, context)
+
+
+class KeywordAutocomplete(autocomplete.Select2QuerySetView):
+
+    @property
+    def create_field(self):
+        if not self.request.journal.submissionconfiguration.hierarchical_keywords:
+            return "word"
+        return None
+
+    def get_queryset(self):
+        qs = models.Keyword.objects.all()
+        if self.q:
+            qs = qs.filter(word__icontains=self.q)
+        return qs

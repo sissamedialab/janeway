@@ -30,6 +30,7 @@ freezegun==1.2.0
 geoip2==4.8.0
 html2text==2017.10.4
 idna==2.7
+django-autocomplete-light==3.12.1
 ipaddress==1.0.16
 iso639-lang==2.6
 django-ipware==7.0.1
