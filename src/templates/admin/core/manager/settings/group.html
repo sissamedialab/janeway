@@ -5,6 +5,10 @@
 {% block title %}{{ group|capfirst }} Settings{% endblock title %}
 {% block title-section %}{{ group|capfirst }} Settings{% endblock %}
 
+{% block css %}
+    {{ attr_form.media.css }}
+{% endblock css %}
+
 {% block breadcrumbs %}
     {{ block.super }}
     <li><a href="{% url 'core_manager_index' %}">Manager</a></li>
@@ -58,7 +62,7 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">
     <script type="text/javascript" src="{% static "common/js/jq-ui.min.js" %}"></script>
     <script src="{% static "common/js/tagit.js" %}"></script>
-
+    {{ attr_form.media.js }}
     <script type="text/javascript">
         $(document).ready(function () {
             $("#id_keywords").tagit(

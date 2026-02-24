@@ -6,6 +6,7 @@ from django.forms import (
     ModelForm,
     DateInput,
     HiddenInput,
+    ModelMultipleChoiceField,
     Form,
     RadioSelect,
 )
@@ -14,6 +15,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
 
+from dal_select2.widgets import ModelSelect2Multiple
 from modeltranslation import forms as mt_forms, translator
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Checkbox as ReCaptchaWidget
@@ -70,7 +72,26 @@ class KeywordModelForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance.pk:
+        journal = getattr(self.instance, 'journal', self.instance)
+        if journal and (
+                journal.submissionconfiguration.hierarchical_keywords
+                or journal.submissionconfiguration.autocomplete_keywords
+        ):
+            self.fields['keywords'] = ModelMultipleChoiceField(
+                queryset=submission_models.Keyword.objects.all(),
+                required=False,
+                widget=ModelSelect2Multiple(
+                    url='keyword-autocomplete',
+                    attrs={
+                        'data-placeholder': _('Type to search...'),
+                        'data-minimum-input-length': 1,
+                        'data-width': '100%',
+                    }
+                )
+            )
+            if self.instance.pk:
+                self.fields['keywords'].initial = self.instance.keywords.all()
+        elif self.instance.pk:
             current_keywords = self.instance.keywords.values_list("word", flat=True)
             field = self.fields["keywords"]
             field.initial = ",".join(current_keywords)
@@ -80,12 +101,19 @@ class KeywordModelForm(ModelForm):
 
         instance = super().save(commit=commit, *args, **kwargs)
         instance.keywords.clear()
-
+        journal = getattr(instance, 'journal', instance)
         if posted_keywords:
-            keyword_list = posted_keywords.split(",")
-            for i, keyword in enumerate(keyword_list):
-                obj, _ = submission_models.Keyword.objects.get_or_create(word=keyword)
-                instance.keywords.add(obj)
+            if journal and (
+                    journal.submissionconfiguration.hierarchical_keywords
+                    or journal.submissionconfiguration.autocomplete_keywords
+            ):
+                for keyword in posted_keywords:
+                    self.instance.keywords.add(keyword)
+            else:
+                keyword_list = posted_keywords.split(",")
+                for i, keyword in enumerate(keyword_list):
+                    obj, _ = submission_models.Keyword.objects.get_or_create(word=keyword)
+                    instance.keywords.add(obj)
         if commit:
             instance.save()
         return instance
