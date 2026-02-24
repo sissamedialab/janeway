@@ -1,8 +1,11 @@
-{% extends "admin/core/base.html" %}}
+{% extends "admin/core/base.html" %}
 {% load foundation static bool_fa securitytags %}
 
 {% block title %}Edit Metadata - {{ article.pk }}{% endblock title %}
 
+{% block css %}
+    {{ info_form.media.css }}
+{% endblock css %}
 
 {% block breadcrumbs %}
     {{ block.super }}
@@ -94,12 +97,13 @@
                         <div class="row expanded">
                          <div class="large-12 columns">
                           <label for="id_keywords">Keywords</label>
-                          <input type="text" id="id_keywords" name="keywords" value="
-
-
-                                  {% if info_form.cleaned_data.keywords %}{{ info_form.cleaned_data.keywords }}{% else %}{% for keyword in article.keywords.all %}{{ keyword.word }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}"/>
-                          <p class="help-text">Hit Enter to add a new keyword.</p>
-                        </div>
+                          {% if request.journal.submissionconfiguration.hierarchical_keywords or journal.submissionconfiguration.autocomplete_keywords %}
+                              {{ info_form.keywords }}
+                          {% else %}
+                              <input type="text" id="id_keywords" name="keywords" value="{% if info_form.cleaned_data.keywords %}{{ info_form.cleaned_data.keywords }}{% else %}{% for keyword in article.keywords.all %}{{ keyword.word }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}"/>
+                              <p class="help-text">Hit Enter to add a new keyword.</p>
+                          {% endif %}
+                         </div>
                        </div>
                       </div>
                       <div class="large-3 columns end">
@@ -237,6 +241,8 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">
     <script type="text/javascript" src="{% static "common/js/jq-ui.min.js" %}"></script>
     <script src="{% static "common/js/tagit.js" %}"></script>
+
+    {{ info_form.media.js }}
 
     <script type="text/javascript">
         $(document).ready(function () {
