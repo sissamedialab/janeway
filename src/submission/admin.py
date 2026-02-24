@@ -225,6 +225,12 @@ class KeywordAdmin(admin.ModelAdmin):
         admin_utils.KeywordArticleInline,
     ]
 
+class KeywordGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'parent_group', 'order')
+    list_filter = ('parent_group',)
+    search_fields = ('name',)
+    ordering = ('order', 'name')
+
 
 class KeywordGroupAdmin(admin.ModelAdmin):
     list_display = ("name", "parent_group", "order")
