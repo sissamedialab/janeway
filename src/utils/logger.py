@@ -2,32 +2,33 @@
 Janeway logging utilities and main logger
 """
 import logging
-import threading
+from contextvars import ContextVar
+
+context_logprefix = ContextVar("prefix", default="")
+
+# ContextVar(..., default=[]) should be safe, but it looks like a risky habit /
+# confusing situation. I prefer dealing explicitly with LookupErrors
+context_logparts = ContextVar("parts")
 
 
 class LogPrefix(object):
     """ A logging prefix scoped for the current thread """
-    _local = threading.local()
 
     @property
     def rendered_prefix(self):
-        try:
-            return self._local.prefix
-        except AttributeError:
-            self._local.prefix = ""
-            return self._local.prefix
+        return context_logprefix.get()
 
     @rendered_prefix.setter
     def rendered_prefix(self, val):
-        self._local.prefix = val
+        context_logprefix.set(val)
 
     @property
     def _parts(self):
         try:
-            return self._local.parts
-        except AttributeError:
-            self._local.parts = []
-        return self._local.parts
+            return context_logparts.get()
+        except LookupError:
+            context_logparts.set([])
+        return context_logparts.get()
 
     def push(self, item):
         self._parts.append(str(item))
@@ -41,7 +42,7 @@ class LogPrefix(object):
         self.rendered_prefix = ":".join(self._parts)
 
     def set(self, *parts):
-        self._local.parts = list(parts)
+        context_logparts.set(list(parts))
         self.update()
 
     def do_prefix(self, msg):
