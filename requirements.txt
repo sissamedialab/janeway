@@ -44,7 +44,7 @@ maxminddb==2.5.1
 mock
 mozilla-django-oidc==4.0.1
 orcid==1.0.3
-packaging==23.2
+packaging==24.2
 pdfkit==1.0.0
 pdfminer.six
 psycopg2-binary==2.9.10
