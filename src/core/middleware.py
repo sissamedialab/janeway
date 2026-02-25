@@ -4,7 +4,6 @@ __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 from uuid import uuid4
-from contextvars import ContextVar
 
 import pytz
 
@@ -19,7 +18,7 @@ from django.utils import timezone
 from press import models as press_models
 from utils import setting_handler
 from utils.logger import get_logger
-from utils.middleware import BaseMiddleware
+from utils.middleware import context_request, BaseMiddleware
 from core import models as core_models
 from journal import models as journal_models
 from repository import models as repository_models
@@ -210,17 +209,15 @@ class PressMiddleware(BaseMiddleware):
                     else:
                         raise Http404('Press cannot access this page.')
 
-_request = ContextVar("request", default=None)
-
 
 class GlobalRequestMiddleware(BaseMiddleware):
     @classmethod
     def get_current_request(cls):
-        return _request.get()
+        return context_request.get()
 
     @staticmethod
     def process_request(request):
-        _request.set(request)
+        context_request.set(request)
 
 
 class TimezoneMiddleware(BaseMiddleware):

@@ -4,13 +4,13 @@ __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 import resource
-import threading
 import time
+from contextvars import ContextVar
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-_local = threading.local()
+context_request = ContextVar("request", default=None)
 
 
 class BaseMiddleware():
@@ -44,11 +44,10 @@ class ThemeEngineMiddleware(object):
     """
 
     def process_request(self, request):
-        _local.request = request
+        context_request.set(request)
 
     def process_response(self, request, response):
-        if hasattr(_local, 'request'):
-            del _local.request
+        context_request.set(None)
         return response
 
 
@@ -77,4 +76,3 @@ class TimeMonitoring(BaseMiddleware):
     def _get_usage():
         utime, stime, *_ = resource.getrusage(resource.RUSAGE_THREAD)
         return (time.time(), utime, stime)
-
