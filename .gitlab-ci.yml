@@ -42,7 +42,7 @@ deploy_to_test:
     name: development
     url: https://wjs-test-test-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_REF_NAME == "wjs-develop"
+    - if: $CI_COMMIT_REF_NAME == "wjs-production"
       when: on_success
     - when: manual
 
