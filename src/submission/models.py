@@ -969,14 +969,10 @@ class ArticleSearchManager(BaseSearchManagerMixin):
         if search_filters.get("abstract"):
             vectors.append(SearchVector("abstract", weight="C"))
         if search_filters.get("full_text"):
-            FileTextModel = swapper.load_model("core", "FileText")
-            field_type = FileTextModel._meta.get_field("contents")
-            if isinstance(field_type, SearchVectorField):
-                vectors.append(
-                    model_utils.SearchVector("galley__file__text__contents", weight="D")
-                )
-            else:
-                vectors.append(SearchVector("galley__file__text__contents", weight="D"))
+            # TODO: upstream janeway wraps this in a custom SearchVector
+            #       which is not compatiblewith django 3.2
+            #       we should prepare a test for this
+            vectors.append(SearchVector("galley__file__text__contents", weight="D"))
         if vectors:
             # Combine all vectors
             vector = vectors[0]
