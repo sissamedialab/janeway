@@ -22,10 +22,10 @@ workflow:
 
 include:
   - project: 'wjs/wjs-profile-project'
-    ref: wjs-develop
+    ref: wjs-production
     file: '.gitlab-ci-pkg-deploy.yml'
   - project: 'wjs/wjs-profile-project'
-    ref: wjs-develop
+    ref: wjs-production
     file: '.gitlab-ci-run-tests.yml'
 
 
@@ -42,7 +42,7 @@ deploy_to_test:
     name: development
     url: https://wjs-test-test-journals.wjapp.it/
   rules:
-    - if: $CI_COMMIT_REF_NAME == "wjs-develop"
+    - if: $CI_COMMIT_REF_NAME == "wjs-production"
       when: on_success
     - when: manual
 
@@ -179,6 +179,12 @@ run-tests-on-security-updates:
     - git fetch --tags --quiet
     - latestTag=$(git describe --tags "$(git rev-list --tags --max-count=1)")
     - git checkout "$latestTag"
+    #
+    # TODO specs#2451:
+    # - review statement "the best thing we can do is to find the latest tag and git-clone from that": why not simply install wjs-profile?
+    # - install also suitable versions of wjs-themes, wjs-submission and wjs-search
+    # - run tests from all projects
+    #
     # The script that sets-up WJS for tests expects CI_PROJECT_DIR to point to a folder that contains WJS,
     # but here we are in Janeway, so we change it to suite us. We'll reset it later.
     - export OLD="$CI_PROJECT_DIR"

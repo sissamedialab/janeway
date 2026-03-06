@@ -35,6 +35,7 @@ from utils import shared as utils_shared
 from utils.decorators import GET_language_override
 from utils.shared import create_language_override_redirect
 
+from dal import autocomplete
 
 @login_required
 @decorators.submission_is_enabled
@@ -1129,3 +1130,18 @@ def configurator(request):
     }
 
     return render(request, template, context)
+
+
+class KeywordAutocomplete(autocomplete.Select2QuerySetView):
+
+    @property
+    def create_field(self):
+        if not self.request.journal.submissionconfiguration.hierarchical_keywords:
+            return 'word'
+        return None
+
+    def get_queryset(self):
+        qs = models.Keyword.objects.all()
+        if self.q:
+            qs = qs.filter(word__icontains=self.q)
+        return qs

@@ -149,13 +149,20 @@ class PublisherNoteAdmin(admin.ModelAdmin):
 
 
 class KeywordAdmin(admin.ModelAdmin):
-    list_display = ('word',)
-    list_filter = ('keywordarticle__article__journal',)
-    search_fields = ('word',)
+    list_display = ('word', 'group')
+    list_filter = ('keywordarticle__article__journal', 'group')
+    search_fields = ('word', 'group__name')
 
     inlines = [
         admin_utils.KeywordArticleInline,
     ]
+
+
+class KeywordGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'parent_group', 'order')
+    list_filter = ('parent_group',)
+    search_fields = ('name',)
+    ordering = ('order', 'name')
 
 
 class SectionAdmin(admin.ModelAdmin):
@@ -221,6 +228,7 @@ admin_list = [
     (models.Field, FieldAdmin),
     (models.FieldAnswer, FieldAnswerAdmin),
     (models.Keyword, KeywordAdmin),
+    (models.KeywordGroup, KeywordGroupAdmin),
     (models.SubmissionConfiguration, SubmissionConfigAdmin),
     (models.ArticleAuthorOrder, ArticleAuthorOrderAdmin),
 ]
