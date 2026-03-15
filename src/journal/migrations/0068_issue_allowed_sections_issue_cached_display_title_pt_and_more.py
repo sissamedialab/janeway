@@ -12,9 +12,9 @@ class Migration(migrations.Migration):
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         (
             "submission",
-            "0089_article_abstract_pt_article_title_pt_keyword_word_cy_and_more",
+            "0089_keyword_created_keyword_deactivated_keyword_notes_and_more",
         ),
-        ("core", "0111_contacts_name_pt_contacts_role_pt_and_more"),
+        ("core", "0110_one_click_review_on_by_default"),
         ("journal", "0067_issue_cached_display_title_es_and_more"),
     ]
 
