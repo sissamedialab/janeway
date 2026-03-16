@@ -37,7 +37,7 @@ jsmin==3.0.1
 kitchen==1.2.4
 libsass==0.23.0
 lxml==4.9.4
-markdown>=3.8.1
+markdown~=3.10.2
 maxminddb==2.5.1
 mock
 mozilla-django-oidc==4.0.1
