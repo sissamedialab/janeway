@@ -6,3 +6,5 @@ cryptography~=46.0.5
 setuptools>=80.1.1,<82
 # GHSA-8rrh-rw8j-w5fx
 wheel>=0.46.2
+# CVE-2026-27448 CVE-2026-27459
+pyOpenSSL~=26.0.0
