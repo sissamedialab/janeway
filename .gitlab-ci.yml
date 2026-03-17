@@ -171,6 +171,7 @@ run-tests-on-security-updates:
     # but we need to test if new updates might change anything.
     # So we (re)install requirements from those modified in the branch that triggered this job.
     - pip install -r "$CI_PROJECT_DIR"/requirements.txt -c "$CI_PROJECT_DIR"/constraints.txt
+    - pip list
     # Now, install the latest version of wjs:
     # we want to test the new library versions on the latest WJS version
     # the best thing we can do is to find the latest tag and git-clone from that
