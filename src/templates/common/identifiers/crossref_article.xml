@@ -62,10 +62,26 @@
                         {% endif %}
                     </pages>
                 {% endif %}
+                {% if article.erratum_of %}
+                <crossmark>
+                  <crossmark_policy>WRITEME Medialab crossmark policy DOI; TODO: add journal settings</crossmark_policy>
+                  <updates>
+                    <update type="erratum" label="Erratum" date="{{ now|date:"Y-m-d" }}">{{ article.erratum_of.get_doi }}</update>
+                  </updates>
+                  {% if article.license %}
+                  <custom_metadata>
+                  <ai:program name="AccessIndicators">
+                    <ai:license_ref>{{ article.license }}</ai:license_ref>
+                  </ai:program>
+                  </custom_metadata>
+                  {% endif %}
+                </crossmark>
+                {% else %}
                 {% if article.license %}
                 <ai:program name="AccessIndicators">
                     <ai:license_ref>{{ article.license }}</ai:license_ref>
                 </ai:program>
+                {% endif %}
                 {% endif %}
                 <doi_data>
                     <doi>{{ article.doi }}</doi>
