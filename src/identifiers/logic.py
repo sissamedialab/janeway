@@ -322,6 +322,12 @@ def create_crossref_journal_context(
     if journal.doi:
         journal_data["doi"] = journal.doi
         journal_data["url"] = journal.site_url()
+    if crossmark_policy_doi := setting_handler.get_setting(
+            "Identifiers",
+            "crossref_crossmark_policy_doi",
+            journal,
+    ).processed_value:
+        journal_data["crossmark_policy_doi"] = crossmark_policy_doi
 
     return journal_data
 

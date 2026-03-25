@@ -64,7 +64,7 @@
                 {% endif %}
                 {% if article.erratum_of %}
                 <crossmark>
-                  <crossmark_policy>WRITEME Medialab crossmark policy DOI; TODO: add journal settings</crossmark_policy>
+                  <crossmark_policy>{{ crossmark_policy_doi }}</crossmark_policy>
                   <updates>
                     <update type="erratum" label="Erratum" date="{{ now|date:"Y-m-d" }}">{{ article.erratum_of.get_doi }}</update>
                   </updates>
