@@ -198,3 +198,17 @@ run-tests-on-security-updates:
 
     # reset the modified ci/cd variables
     - export CI_PROJECT_DIR="$OLD"
+
+
+Janeway tests:
+  tags:
+    - fast-test
+  stage: build
+  image: "$CI_REGISTRY_IMAGE/debian-python-git-janeway"
+  script:
+    - python -m venv venv
+    - source ./venv/bin/activate
+    - cd $CI_PROJECT_DIR
+    - pip install -r requirements.txt -c constraints.txt
+    - cd src
+    - python -m manage test identifiers/tests
