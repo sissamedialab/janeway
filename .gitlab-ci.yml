@@ -37,7 +37,7 @@ deploy_to_test:
   variables:
     SERVER_IP: "$TEST_SERVER_IP"
     SERVER_USER: "$TEST_SERVER_USER"
-    DEPLOY_CMD: "deploy-test-janeway"
+    DEPLOY_CMD: "deploy-test-janeway:${CI_COMMIT_SHA}"
   environment:
     name: development
     url: https://wjs-test-test-journals.wjapp.it/
@@ -55,7 +55,7 @@ deploy_to_dev:
   variables:
     SERVER_IP: "$TEST_SERVER_IP"
     SERVER_USER: "$TEST_SERVER_USER"
-    DEPLOY_CMD: "deploy-dev-janeway"
+    DEPLOY_CMD: "deploy-dev-janeway:${CI_COMMIT_SHA}"
   environment:
     name: development
     url: https://wjs-test-dev-journals.wjapp.it/
