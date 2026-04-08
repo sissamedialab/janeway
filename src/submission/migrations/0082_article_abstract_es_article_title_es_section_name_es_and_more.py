@@ -6,7 +6,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("submission", "0081_auto_20240927_1021"),
+        ("submission", "0085_submissionconfiguration_autocomplete_keywords"),
     ]
 
     operations = [
