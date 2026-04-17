@@ -19,7 +19,7 @@ def orcid_redirect_uri(context, action="login"):
     warnings.warn("This template tag is deprecated. See core.views.user_login_orcid.")
     request = context.get("request")
     if request:
-        return build_redirect_uri(request.site_type, action=action)
+        return build_redirect_uri(request.site_type)
     else:
         return ""
 
