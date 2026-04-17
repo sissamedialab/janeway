@@ -1947,6 +1947,31 @@ class Article(AbstractLastModifiedModel):
         ):
             return True
 
+    def erratum_of(self):
+        """
+        Return the "parent" article for which this article is an erratum.
+
+        This is intended to be used in
+        templates/common/identifiers/crossref_article.xml
+        """
+        if self.section.name != "Erratum":
+            return None
+
+        # ATM, the "Genealogy" model is not in Janeway core.
+        if not hasattr(self, "ancestors"):
+            return None
+
+        if not self.ancestors.exists():
+            return None
+
+        # We can safely assume that an erratum refers to only one other paper
+        # so we just return the first "ancestor".
+        #
+        # Also, there is no need to check if the "parent" was published:
+        # the business logic should ensure that we cannot publish an erratum
+        # to a non-published paper.
+        return self.ancestors.first().parent
+
 
 class FrozenAuthor(AbstractLastModifiedModel):
     article = models.ForeignKey(
