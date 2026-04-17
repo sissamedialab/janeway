@@ -62,10 +62,27 @@
                         {% endif %}
                     </pages>
                 {% endif %}
+                {% if article.erratum_of %}
+                <crossmark>
+                  {# Crossref informed that the crossmark-policy DOI is not used and that the paper's DOI can be used instead to fulfill the XML schema requirements. #}
+                  <crossmark_policy>{{ article.doi }}</crossmark_policy>
+                  <updates>
+                    <update type="erratum" date="{{ now|date:"Y-m-d" }}">{{ article.erratum_of.get_doi }}</update>
+                  </updates>
+                  {% if article.license %}
+                  <custom_metadata>
+                  <ai:program name="AccessIndicators">
+                    <ai:license_ref>{{ article.license }}</ai:license_ref>
+                  </ai:program>
+                  </custom_metadata>
+                  {% endif %}
+                </crossmark>
+                {% else %}
                 {% if article.license %}
                 <ai:program name="AccessIndicators">
                     <ai:license_ref>{{ article.license }}</ai:license_ref>
                 </ai:program>
+                {% endif %}
                 {% endif %}
                 <doi_data>
                     <doi>{{ article.doi }}</doi>
