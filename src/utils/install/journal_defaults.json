@@ -5265,24 +5265,5 @@
             "editor",
             "journal-manager"
         ]
-    },
-    {
-        "group": {
-            "name": "Identifiers"
-        },
-        "setting": {
-            "description": "A DOI which points to a publisher's CrossMark policy document.",
-            "is_translatable": false,
-            "name": "crossref_crossmark_policy_doi",
-            "pretty_name": "Crossmark policy",
-            "type": "char"
-        },
-        "value": {
-            "default": ""
-        },
-        "editable_by": [
-            "editor",
-            "journal-manager"
-        ]
     }
 ]
