@@ -227,6 +227,16 @@ def user_login_orcid(request):
         )
         return redirect(logic.reverse_with_next("core_login", next_url))
 
+    # If the currently logged in user wants to connect the orcid id, after returning from orcid and validating the
+    # return token we can just save the orcid id on the current user and redirect to the original page.
+    # if user is not logged or orcid_id is not set we fallback to login action.
+    if action == "connect":
+        if request.user.is_authenticated and orcid_id:
+            request.user.orcid = orcid_id
+            request.user.save()
+            return redirect(request.site_type.auth_success_url(next_url=next_url))
+        action = "login"
+
     # The verification worked.
     # If the user wanted to log in, try to log them in.
     if action == "login":
