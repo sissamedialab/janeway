@@ -43,7 +43,7 @@
                     <tr>
                             <td colspan="9">No {{ object_name }} have been uploaded.</td>
                     </tr>
-                    {% endif %}
+                    {% endfor %}
                 </table>
                 {% if not files or object_mode == "document" %}
                  <a class="button success" data-open="uploadbox"><i class="fa fa-cloud-upload">&nbsp;</i>Upload a new {{ object_name }}</a>
