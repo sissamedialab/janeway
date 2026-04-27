@@ -94,13 +94,15 @@ class IssueViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         from journal import models as journal_models
+        now = timezone.now()
         if self.request.journal:
-            queryset = journal_models.Issue.objects.filter(journal=self.request.journal)
+            queryset = journal_models.Issue.objects.filter(
+                journal=self.request.journal,
+                date__lte=now,
+            )
         else:
-            queryset = journal_models.Issue.objects.all()
-
+            queryset = journal_models.Issue.objects.filter(date__lte=now)
         return queryset
-
 
 class LicenceViewSet(viewsets.ModelViewSet):
     """
