@@ -69,16 +69,16 @@
                 {% endif %}
                 {% if article.arxiv_id %}
                 <!-- arXiv relation -->
-                <rel:program xmlns:rel="http://www.crossref.org/relations.xsd"
-                             name="relations">
-                  <rel:related_item>
-                    <rel:intra_work_relation
+                <program xmlns="http://www.crossref.org/relations.xsd"
+                         name="relations">
+                  <related_item>
+                    <intra_work_relation
                         relationship-type="hasPreprint"
                         identifier-type="arxiv">
                       {{ article.arxiv_id }}
-                    </rel:intra_work_relation>
-                  </rel:related_item>
-                </rel:program>
+                    </intra_work_relation>
+                  </related_item>
+                </program>
                 {% endif %}
                 <doi_data>
                     <doi>{{ article.doi }}</doi>
