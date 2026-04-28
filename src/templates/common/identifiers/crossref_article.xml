@@ -73,7 +73,7 @@
                              name="relations">
                   <rel:related_item>
                     <rel:intra_work_relation
-                        relationship-type="isPreprintOf"
+                        relationship-type="hasPreprint"
                         identifier-type="arxiv">
                       {{ article.arxiv_id }}
                     </rel:intra_work_relation>
