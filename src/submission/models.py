@@ -1162,6 +1162,12 @@ class Article(AbstractLastModifiedModel):
     def get_pubid(self):
         return self.get_identifier('pubid')
 
+    @property
+    def arxiv_id(self):
+        if arxiv_id := self.get_identifier("arxiv"):
+            return arxiv_id.partition("v")[0]
+        return None
+
     def non_correspondence_authors(self):
         if self.correspondence_author:
             return self.authors.exclude(pk=self.correspondence_author.pk)

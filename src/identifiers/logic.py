@@ -333,6 +333,7 @@ def create_crossref_article_context(article, identifier=None):
             ' ' if article.subtitle is not None else '',
             article.subtitle if article.subtitle is not None else ''),
         'doi': identifier.identifier if identifier else render_doi_from_pattern(article),
+        'arxiv_id': article.arxiv_id,
         'url': article.url,
         'authors': article.frozenauthor_set.all(),
         'abstract': strip_tags(article.abstract or ''),

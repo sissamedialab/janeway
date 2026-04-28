@@ -67,6 +67,19 @@
                     <ai:license_ref>{{ article.license }}</ai:license_ref>
                 </ai:program>
                 {% endif %}
+                {% if article.arxiv_id %}
+                <!-- arXiv relation -->
+                <rel:program xmlns:rel="http://www.crossref.org/relations.xsd"
+                             name="relations">
+                  <rel:related_item>
+                    <rel:intra_work_relation
+                        relationship-type="isPreprintOf"
+                        identifier-type="arxiv">
+                      {{ article.arxiv_id }}
+                    </rel:intra_work_relation>
+                  </rel:related_item>
+                </rel:program>
+                {% endif %}
                 <doi_data>
                     <doi>{{ article.doi }}</doi>
                     <resource>{{ article.url }}</resource>
