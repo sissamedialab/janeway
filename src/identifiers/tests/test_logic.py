@@ -485,3 +485,89 @@ class TestLogic(TestCase):
             missing_settings,
             ["crossref_prefix", "crossref_username", "crossref_password"],
         )
+
+
+class TestArxivCrossrefDeposit(TestCase):
+    """
+    Test the Crossref deposit XML for an article that also has an arXiv
+    identifier: it should produce a <rel:intra_work_relation> pointing
+    to the arXiv id.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.press = helpers.create_press()
+        cls.press.save()
+        cls.journal, _ = helpers.create_journals()
+
+        save_setting('general', 'journal_issn', cls.journal, '1234-5678')
+        save_setting('general', 'print_issn', cls.journal, '8765-4321')
+        save_setting('Identifiers', 'use_crossref', cls.journal, True)
+        save_setting('Identifiers', 'crossref_prefix', cls.journal, '10.0000')
+        save_setting('Identifiers', 'crossref_email', cls.journal, 'sample_email@example.com')
+        save_setting('Identifiers', 'crossref_name', cls.journal, 'Journal Name')
+        save_setting('Identifiers', 'crossref_registrant', cls.journal, 'registrant')
+
+        cls.issue = helpers.create_issue(cls.journal, vol=1, number=1)
+
+        # a1: only a DOI
+        cls.a1 = helpers.create_article(cls.journal, with_author=True)
+        cls.a1.primary_issue = cls.issue
+        cls.a1.date_published = timezone.now()
+        cls.a1.stage = submission_models.STAGE_PUBLISHED
+        cls.a1.save()
+        cls.issue.articles.add(cls.a1)
+        cls.doi_a1 = logic.generate_crossref_doi_with_pattern(cls.a1)
+
+        # a2: DOI + arXiv id
+        cls.a2 = helpers.create_article(cls.journal, with_author=True)
+        cls.a2.primary_issue = cls.issue
+        cls.a2.date_published = timezone.now()
+        cls.a2.stage = submission_models.STAGE_PUBLISHED
+        cls.a2.save()
+        cls.issue.articles.add(cls.a2)
+        cls.doi_a2 = logic.generate_crossref_doi_with_pattern(cls.a2)
+        cls.arxiv_a2 = models.Identifier.objects.create(
+            id_type='arxiv',
+            identifier='2401.12345',
+            article=cls.a2,
+        )
+
+        cls.schema_base_path = os.path.join(
+            settings.BASE_DIR,
+            'identifiers',
+            'tests',
+            'test_data',
+            'schemas',
+        )
+
+    def _render_validate_and_parse(self, identifier):
+        template = 'common/identifiers/crossref_doi_batch.xml'
+        template_context = logic.create_crossref_doi_batch_context(
+            self.journal,
+            {identifier},
+        )
+        deposit = logic.render_to_string(template, template_context)
+
+        soup = BeautifulSoup(deposit, 'lxml')
+        version = soup.find('doi_batch')['version']
+        schema_filename = f'crossref{version}.xsd'
+        with open(os.path.join(self.schema_base_path, schema_filename)) as fileref:
+            xml_schema_doc = etree.parse(fileref)
+        xml_schema = etree.XMLSchema(xml_schema_doc)
+        doc = etree.parse(BytesIO(str.encode(deposit)))
+        xml_schema.assertValid(doc)
+        self.assertTrue(xml_schema.validate(doc))
+        return doc
+
+    def test_article_without_arxiv_xml_has_no_intra_work_relation(self):
+        doc = self._render_validate_and_parse(self.doi_a1)
+        ns = {'rel': 'http://www.crossref.org/relations.xsd'}
+        self.assertEqual(doc.findall('.//rel:intra_work_relation', ns), [])
+
+    def test_article_with_arxiv_xml_has_intra_work_relation_with_arxiv_id(self):
+        doc = self._render_validate_and_parse(self.doi_a2)
+        ns = {'rel': 'http://www.crossref.org/relations.xsd'}
+        relations = doc.findall('.//rel:intra_work_relation', ns)
+        self.assertEqual(len(relations), 1)
+        self.assertEqual(relations[0].text.strip(), self.a2.arxiv_id)
