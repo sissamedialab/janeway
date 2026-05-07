@@ -100,6 +100,18 @@ The plugin settings file tells Janeway about your plugin and is used to connect 
             events.example_event_func,
         )
 
+    # Plugins can unregister functions from events to replace existing registered functions with custom versions.
+    def register_for_events():
+
+        events_logic.Events.unregister_for_event(
+            ON_ARTICLE_SUBMITTED,
+            journal_logic.fire_submission_notifications,
+        )
+        events_logic.Events.register_for_event(
+            ON_ARTICLE_SUBMITTED,
+            events.example_event_func,
+        )
+
 
 .. figure:: ../nstatic/typesetting_plugin_dashboard.png
    :alt: Example of a dashboard template for the typesetting plugin
