@@ -847,6 +847,9 @@ def user_can_edit_article(func):
     def wrapper(request, *args, **kwargs):
         article_id = kwargs["article_id"]
 
+        if not request.user.is_staff:
+            deny_access(request)
+
         article = models.Article.get_article(request.journal, "id", article_id)
 
         if not request.user.is_staff and not request.user == article.correspondence_author and not request.user == article.owner:
@@ -869,6 +872,9 @@ def user_can_edit_author(func):
 
     def wrapper(request, *args, **kwargs):
         author_id = kwargs["author_id"]
+
+        if not request.user.is_staff:
+            deny_access(request)
         author = models.FrozenAuthor.objects.get(pk=author_id)
         if author.can_edit(request.user):
             return func(request, *args, **kwargs)
