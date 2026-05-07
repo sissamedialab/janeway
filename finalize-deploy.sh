@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+echo "!!!! THIS SCRIPT IS DEPRECATED AND WILL BE REMOVED AFTER JCAP DEPLOYMENT !!!!"
+
 if [[ $# -lt 1 ]]; then
     echo -e "Missing parameter\nCommand: $0 /path/to/python"
     exit 1
