@@ -37,7 +37,7 @@ deploy_to_test:
   variables:
     SERVER_IP: "$TEST_SERVER_IP"
     SERVER_USER: "$TEST_SERVER_USER"
-    DEPLOY_CMD: "deploy-test-janeway"
+    DEPLOY_CMD: "deploy-test-janeway:${CI_COMMIT_SHA}"
   environment:
     name: development
     url: https://wjs-test-test-journals.wjapp.it/
@@ -55,7 +55,7 @@ deploy_to_dev:
   variables:
     SERVER_IP: "$TEST_SERVER_IP"
     SERVER_USER: "$TEST_SERVER_USER"
-    DEPLOY_CMD: "deploy-dev-janeway"
+    DEPLOY_CMD: "deploy-dev-janeway:${CI_COMMIT_SHA}"
   environment:
     name: development
     url: https://wjs-test-dev-journals.wjapp.it/
@@ -191,8 +191,13 @@ run-tests-on-security-updates:
     - git fetch --tags --quiet
     - latestTag=$(git describe --tags "$(git rev-list --tags --max-count=1)")
     - git checkout "$latestTag"
+    #
+    # TODO specs#2451:
+    # - review statement "the best thing we can do is to find the latest tag and git-clone from that": why not simply install wjs-profile?
+    # - install also suitable versions of wjs-themes, wjs-submission and wjs-search
+    # - run tests from all projects
+    #
     # The script that sets-up WJS for tests expects CI_PROJECT_DIR to point to a folder that contains WJS,
-    # but here we are in Janeway, so we change it to suite us. We'll reset it later.
     - export OLD="$CI_PROJECT_DIR"
     - export CI_PROJECT_DIR="$(pwd)"
 
