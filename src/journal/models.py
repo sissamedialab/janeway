@@ -57,6 +57,7 @@ from utils.function_cache import cache, mutable_cached_property
 from utils.logger import get_logger
 from review import models as review_models
 from identifiers import models as identifier_models
+from wjs_customisation.article import wjs_filter_children_articles
 
 logger = get_logger(__name__)
 
@@ -1179,6 +1180,8 @@ class Issue(AbstractLastModifiedModel):
                 stage=submission_models.STAGE_PUBLISHED,
                 date_published__lte=timezone.now(),
             )
+
+        issue_articles = wjs_filter_children_articles(issue_articles)
 
         return issue_articles
 
