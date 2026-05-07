@@ -63,6 +63,7 @@ from utils import models as utils_models, shared, setting_handler, xml_validatio
 from utils.logger import get_logger
 from events import logic as event_logic
 from typesetting import models as typesetting_models
+from wjs_customisation.article import wjs_filter_children_articles
 
 logger = get_logger(__name__)
 
@@ -235,6 +236,8 @@ def articles(request):
             pk__in=pinned_article_pks,
         )
     )
+
+    article_objects = wjs_filter_children_articles(article_objects)
 
     paginator = Paginator(article_objects, show)
 
@@ -2977,10 +2980,11 @@ class PublishedArticlesListView(FacetedArticlesListView):
 
     def get_queryset(self, params_querydict=None):
         self.queryset = super().get_queryset(params_querydict)
-        return self.queryset.filter(
+        self.queryset = self.queryset.filter(
             date_published__lte=timezone.now(),
             stage=submission_models.STAGE_PUBLISHED,
         )
+        return wjs_filter_children_articles(self.queryset)
 
     def get_facets(self):
         facets = {
