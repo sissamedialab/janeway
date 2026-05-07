@@ -2980,10 +2980,11 @@ class PublishedArticlesListView(FacetedArticlesListView):
 
     def get_queryset(self, params_querydict=None):
         self.queryset = super().get_queryset(params_querydict)
-        return self.queryset.filter(
+        self.queryset = self.queryset.filter(
             date_published__lte=timezone.now(),
             stage=submission_models.STAGE_PUBLISHED,
         )
+        return wjs_filter_children_articles(self.queryset)
 
     def get_facets(self):
         facets = {
