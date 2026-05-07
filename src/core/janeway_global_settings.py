@@ -53,7 +53,6 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 # Application definition
 
 INSTALLED_APPS = [
-    "daphne",
     "modeltranslation",
     "apps.JanewayAdminConfig",
     "django.contrib.auth",
