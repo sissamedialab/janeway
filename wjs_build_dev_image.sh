@@ -1,5 +1,7 @@
 #!/bin/bash
-
+"""
+Script to simplify testing the build of custom images locally to provide a quick way to test upgrades and changes to janeway without the need to wait for the CI
+"""
 set -e
 
 if [[ -z "$2" ]]; then
