@@ -21,7 +21,7 @@
         {% endif %}
         <li class="li {% if article.current_step >= 2 %}complete{% endif %}">
             <div class="status">
-                <h4>{% if article %}{% if article.current_step >= 2 or article.stage != "Unsubmitted" %}
+                <h4>{% if article %}{% if article.current_step >= 2 %}
                   <a href="{% url 'submit_info' article.id %}">
                     {% trans "Article Information" %}
                   </a>
