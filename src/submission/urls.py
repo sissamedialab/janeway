@@ -9,6 +9,7 @@ from submission import views
 urlpatterns = [
     re_path(r"^start/$", views.start, name="submission_start"),
     re_path(r"^(?P<type>[-\w.]+)/start/$", views.start, name="submission_start"),
+    re_path(r"^(?P<article_id>\d+)/issue/$", views.submit_issue, name="submit_issue"),
     re_path(r"^(?P<article_id>\d+)/info/$", views.submit_info, name="submit_info"),
     re_path(
         r"^(?P<article_id>\d+)/authors/$", views.submit_authors, name="submit_authors"
