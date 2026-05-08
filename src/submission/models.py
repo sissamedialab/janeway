@@ -969,7 +969,7 @@ class ArticleSearchManager(BaseSearchManagerMixin):
         if search_filters.get("abstract"):
             vectors.append(SearchVector("abstract", weight="C"))
         if search_filters.get("full_text"):
-            # TODO: upstream janeway wraps this in a custom SearchVector
+            # TODO wjs/janeway#38: upstream janeway wraps this in a custom SearchVector
             #       which is not compatiblewith django 3.2
             #       we should prepare a test for this
             vectors.append(SearchVector("galley__file__text__contents", weight="D"))
