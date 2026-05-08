@@ -9,6 +9,10 @@
     {{ block.super }}
 {% endblock %}
 
+{% block css %}
+    {{ form.media.css }}
+{% endblock css %}
+
 {% block breadcrumbs %}
     {{ block.super }}
     <li>Submit an Article</li>
@@ -121,6 +125,8 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">
     <script type="text/javascript" src="{% static "common/js/jq-ui.min.js" %}"></script>
     <script src="{% static "common/js/tagit.js" %}"></script>
+
+    {{ form.media.js }}
 
     <script type="text/javascript">
         $(document).ready(function () {
