@@ -10,7 +10,6 @@ import os
 from dateutil import parser as dateparser
 from itertools import chain
 import warnings
-from django.utils.timezone import now
 from iso639 import Lang
 
 from django.apps import apps
