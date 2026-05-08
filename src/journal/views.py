@@ -1434,8 +1434,11 @@ def manage_issues(request, issue_id=None, event=None):
             modal = None
 
     else:
-        issue, modal, form, galley_form, sort_form = None, None, issue_forms.NewIssue(
-            journal=request.journal), None, None
+        issue = None
+        modal = None
+        form = issue_forms.NewIssue(journal=request.journal)
+        galley_form = None
+        sort_form = None
 
     if request.POST:
         if "make_current" in request.POST:
