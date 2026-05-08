@@ -91,7 +91,7 @@ def start(request, type=None):
 
             user_has_issues = Issue.objects.for_submission(user=request.user, journal=request.journal).exists()
             if user_has_issues:
-                return redirect(reverse('submit_issue', kwargs={'article_id': new_article.pk}))
+                return redirect(reverse("submit_issue", kwargs={"article_id": new_article.pk}))
             else:
                 return redirect(
                     reverse(

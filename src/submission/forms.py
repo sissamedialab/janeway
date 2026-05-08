@@ -87,10 +87,6 @@ class SelectIssueForm(forms.ModelForm):
 
     class Meta:
         model = models.Article
-
-
-
-
         fields = ("primary_issue",)
 
     def __init__(self, *args, **kwargs):
