@@ -72,25 +72,25 @@ class KeywordModelForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        journal = getattr(self.instance, 'journal', self.instance)
+        journal = getattr(self.instance, "journal", self.instance)
         if journal and (
                 journal.submissionconfiguration.hierarchical_keywords
                 or journal.submissionconfiguration.autocomplete_keywords
         ):
-            self.fields['keywords'] = ModelMultipleChoiceField(
+            self.fields["keywords"] = ModelMultipleChoiceField(
                 queryset=submission_models.Keyword.objects.all(),
                 required=False,
                 widget=ModelSelect2Multiple(
-                    url='keyword-autocomplete',
+                    url="keyword-autocomplete",
                     attrs={
-                        'data-placeholder': _('Type to search...'),
-                        'data-minimum-input-length': 1,
-                        'data-width': '100%',
+                        "data-placeholder": _("Type to search..."),
+                        "data-minimum-input-length": 1,
+                        "data-width": "100%",
                     }
                 )
             )
             if self.instance.pk:
-                self.fields['keywords'].initial = self.instance.keywords.all()
+                self.fields["keywords"].initial = self.instance.keywords.all()
         elif self.instance.pk:
             current_keywords = self.instance.keywords.values_list("word", flat=True)
             field = self.fields["keywords"]
@@ -101,7 +101,7 @@ class KeywordModelForm(ModelForm):
 
         instance = super().save(commit=commit, *args, **kwargs)
         instance.keywords.clear()
-        journal = getattr(instance, 'journal', instance)
+        journal = getattr(instance, "journal", instance)
         if posted_keywords:
             if journal and (
                     journal.submissionconfiguration.hierarchical_keywords
