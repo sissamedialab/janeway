@@ -485,8 +485,7 @@ def register(request, orcid_token=None):
                 request,
                 messages.SUCCESS,
                 _(
-                    "Your account has been created. Please follow the "
-                    "instructions in the email that has been sent to you."
+                    "<b>Warning</b>! Your account is not active yet! To activate it, <b>click the link in the email</b> that has just been sent to you."
                 ),
             )
             return redirect(logic.reverse_with_next("core_login", next_url))
