@@ -17,6 +17,7 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone, translation
 from django.utils.decorators import method_decorator
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -1771,25 +1772,28 @@ def affiliation_update_from_orcid(
 
 
 class KeywordAutocomplete(autocomplete.Select2QuerySetView):
-
-    @property
-    def create_field(self):
-        if not self.request.journal.submissionconfiguration.hierarchical_keywords:
-            return "word"
-        return None
-
+    create_field = "word"
 
     def has_add_permission(self, request):
         return self.request.user.is_authenticated
 
     def create_object(self, text):
-        """Create an object given a text."""
-        kword = self.get_queryset().get_or_create(**{self.create_field: text})[0]
+        """
+        Create an object given a text.
+
+        They are created as deactivated to prevent immediate use until reviewed and activated by the journal admin.
+        """
+        kword = self.get_queryset().get_or_create(**{self.create_field: text, "deactivated": now()})[0]
         self.request.journal.keywords.add(kword)
         return kword
 
     def get_queryset(self):
         qs = models.Keyword.objects.filter(journal=self.request.journal)
+        if self.request.journal.submissionconfiguration.hierarchical_keywords:
+            qs = qs.filter(group__isnull=True)
+        else:
+            qs = qs.filter(group__isnull=False)
+        qs = qs.filter(deactivated__isnull=True)
         if self.q:
             qs = qs.filter(word__icontains=self.q)
         return qs
