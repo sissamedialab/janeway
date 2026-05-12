@@ -78,13 +78,13 @@ class KeywordModelForm(ModelForm):
                 or journal.submissionconfiguration.autocomplete_keywords
         ):
             self.fields["keywords"] = ModelMultipleChoiceField(
-                queryset=submission_models.Keyword.objects.all(),
+                queryset=submission_models.Keyword.objects.filter(journal=journal),
                 required=False,
                 widget=ModelSelect2Multiple(
                     url="keyword-autocomplete",
                     attrs={
                         "data-placeholder": _("Type to search..."),
-                        "data-minimum-input-length": 1,
+                        "data-minimum-input-length": 3,
                         "data-width": "100%",
                     }
                 )

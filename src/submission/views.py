@@ -10,6 +10,7 @@ from dal import autocomplete
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Permission
 from django.urls import reverse
 from django.db import transaction
 from django.http import HttpResponse, Http404
@@ -30,7 +31,7 @@ from core.forms import (
     OrcidAffiliationForm,
     OrganizationNameForm,
 )
-from journal.models import Issue
+from journal.models import Issue, Journal
 from repository import models as preprint_models
 from security.decorators import (
     production_user_or_editor_required,
@@ -1777,8 +1778,18 @@ class KeywordAutocomplete(autocomplete.Select2QuerySetView):
             return "word"
         return None
 
+
+    def has_add_permission(self, request):
+        return self.request.user.is_authenticated
+
+    def create_object(self, text):
+        """Create an object given a text."""
+        kword = self.get_queryset().get_or_create(**{self.create_field: text})[0]
+        self.request.journal.keywords.add(kword)
+        return kword
+
     def get_queryset(self):
-        qs = models.Keyword.objects.all()
+        qs = models.Keyword.objects.filter(journal=self.request.journal)
         if self.q:
             qs = qs.filter(word__icontains=self.q)
         return qs

@@ -113,5 +113,5 @@ urlpatterns = [
         views.licenses,
         name="submission_licenses_id",
     ),
-    re_path(r"^keyword-autocomplete/", views.KeywordAutocomplete.as_view(), name="keyword-autocomplete"),
+    re_path(r"^keyword-autocomplete/", views.KeywordAutocomplete.as_view(validate_create=True), name="keyword-autocomplete"),
 ]
