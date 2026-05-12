@@ -174,7 +174,7 @@ run-tests-on-security-updates:
     - pip list
     # Now, install the latest version of wjs:
     # we want to test the new library versions on the latest WJS version not release candidate
-    - pip install wjs-profile-project[test]
+    - pip install wjs-jcom-profile[test]
     - cd /usr/local/lib/python3.11/site-packages/wjs
     #
     # TODO specs#2451:
