@@ -178,7 +178,7 @@ run-tests-on-security-updates:
     - git clone --depth 1 "https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.sissamedialab.it/wjs/wjs-profile-project.git"
     - cd wjs-profile-project/
     - git fetch --tags --quiet
-    - latestTag=$(git describe --tags "$(git rev-list --tags --exclude='*dev*' --max-count=1)")
+    - latestTag=$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
     - git checkout "$latestTag"
 
     #
