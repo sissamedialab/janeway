@@ -185,11 +185,12 @@ run-tests-on-security-updates:
     - pip install -r "$CI_PROJECT_DIR"/requirements.txt -c "$CI_PROJECT_DIR"/constraints.txt
     # Now, install the latest version of wjs:
     # we want to test the new library versions on the latest WJS version
-    # the best thing we can do is to find the latest tag and git-clone from that
+    # the best thing we can do is to find the latest tag and git-clone from that keeping only
+    # tags with format vX.Y.Z
     - git clone --depth 1 "https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.sissamedialab.it/wjs/wjs-profile-project.git"
     - cd wjs-profile-project/
     - git fetch --tags --quiet
-    - latestTag=$(git describe --tags "$(git rev-list --tags --max-count=1)")
+    - latestTag=$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
     - git checkout "$latestTag"
     #
     # TODO specs#2451:
