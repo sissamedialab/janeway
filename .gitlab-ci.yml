@@ -161,12 +161,18 @@ build_janeway_image_wjs_production:
 
 
 
-# Do not use to test changes to Janeway code!
+# This job tests the Janeway code from the commit that triggered it (see below):
+# the code baked into the image is replaced with the current checkout.
 run-tests-on-security-updates:
   when: manual
   extends:
     - .run-tests
   before_script:
+    # Replace the Janeway code baked into the image (cloned from $BRANCH at
+    # image-build time, possibly stale) with the code from the commit that
+    # triggered this pipeline, so we test *this* commit against the updates.
+    - rm -rf /janeway
+    - cp -a "$CI_PROJECT_DIR/." /janeway/
     # Optionally uninstall packages listed in the custom CI variable
     # PIP_UNINSTALL_PACKAGES (space-separated) before (re)installing requirements.
     # Note that the varible is used unquoted; we expect this to be safe
