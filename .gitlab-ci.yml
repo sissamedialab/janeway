@@ -135,18 +135,6 @@ deploy_to_production:
     - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --build-arg BRANCH=$CI_COMMIT_REF_NAME --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
     - docker push $TAG
 
-build_janeway_image_1_8:
-  extends:
-    - .build_janeway_image
-  variables:
-    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:1.8"
-  rules:
-    - if: $CI_COMMIT_REF_NAME == "r-v1.8.x"
-      when: on_success
-    - if: $CI_COMMIT_REF_NAME != "r-v1.8.x"
-      when: manual
-      allow_failure: true
-
 build_janeway_image_wjs_develop:
   extends:
     - .build_janeway_image
@@ -179,6 +167,12 @@ run-tests-on-security-updates:
   extends:
     - .run-tests
   before_script:
+    # Optionally uninstall packages listed in the custom CI variable
+    # PIP_UNINSTALL_PACKAGES (space-separated) before (re)installing requirements.
+    # Note that the varible is used unquoted; we expect this to be safe
+    # because any action that an injection could trigger should already be available
+    # to the operator that triggered this job.
+    - if [ -n "$PIP_UNINSTALL_PACKAGES" ]; then pip uninstall -y $PIP_UNINSTALL_PACKAGES; fi
     # Note: we are running on an image that has already janeway installed,
     # but we need to test if new updates might change anything.
     # So we (re)install requirements from those modified in the branch that triggered this job.
