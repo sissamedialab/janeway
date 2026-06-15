@@ -993,7 +993,9 @@ class ArticleSearchManager(BaseSearchManagerMixin):
     def stringify_queryset(queryset):
         sql, params = queryset.query.sql_with_params()
         with connection.cursor() as cursor:
-            return cursor.mogrify(sql, params).decode()
+            result = cursor.mogrify(sql, params)
+            # psycopg2 returns bytes, psycopg3 returns str
+            return result.decode() if isinstance(result, bytes) else result
 
 
 class ActiveArticleManager(models.Manager):
