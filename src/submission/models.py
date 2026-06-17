@@ -907,6 +907,11 @@ class ArticleSearchManager(BaseSearchManagerMixin):
         # a column from a subquery filter and postgres sorting requires
         # distinct fields to match order_by fields
         inner_sql = self.stringify_queryset(queryset)
+        # mogrify() already inlined the parameters into inner_sql, but .raw()
+        # makes psycopg3 re-parse the string for placeholders. A literal '%'
+        # coming from the search term (e.g. "50%") then looks like a bad
+        # placeholder ("%2", ...). Double them so psycopg3 collapses them back.
+        inner_sql = inner_sql.replace("%", "%%")
 
         if "relevance" in sort:
             # Relevance is not a field but an annotation
@@ -993,7 +998,9 @@ class ArticleSearchManager(BaseSearchManagerMixin):
     def stringify_queryset(queryset):
         sql, params = queryset.query.sql_with_params()
         with connection.cursor() as cursor:
-            return cursor.mogrify(sql, params).decode()
+            result = cursor.mogrify(sql, params)
+            # psycopg2 returns bytes, psycopg3 returns str
+            return result.decode() if isinstance(result, bytes) else result
 
 
 class ActiveArticleManager(models.Manager):
