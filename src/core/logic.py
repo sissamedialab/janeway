@@ -417,18 +417,21 @@ def get_settings_to_edit(display_group, journal, user):
                 "object": setting_handler.get_setting(
                     "metadata", "author_job_title", journal
                 ),
+                "group_name": "metadata",
             },
             {
                 "name": "author_department",
                 "object": setting_handler.get_setting(
                     "metadata", "author_department", journal
                 ),
+                "group_name": "metadata",
             },
             {
                 "name": "author_affiliation_dates",
                 "object": setting_handler.get_setting(
                     "metadata", "author_affiliation_dates", journal
                 ),
+                "group_name": "metadata",
             },
         ]
         setting_group = "general"
