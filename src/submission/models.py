@@ -778,6 +778,10 @@ class Keyword(models.Model):
     deactivated = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
 
+    @property
+    def first_letter(self):
+        return self.word[0].upper() if self.word else ""
+
     def __str__(self):
         return self.word
 
