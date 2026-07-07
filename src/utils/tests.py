@@ -41,6 +41,7 @@ from utils.forms import (
     KeywordModelForm,
     plain_text_validator,
 )
+from cms import models as cms_models
 from utils.logic import generate_sitemap
 from utils.testing import helpers
 from utils.shared import clear_cache
@@ -182,6 +183,18 @@ class UtilsTests(TestCase):
         )
         cls.issue_one.articles.add(cls.article_one)
 
+        # Setup a CMS page for sitemap testing
+        cls.journal_content_type = ContentType.objects.get_for_model(
+            cls.journal_one
+        )
+        cls.cms_page, created = cms_models.Page.objects.get_or_create(
+            content_type=cls.journal_content_type,
+            object_id=cls.journal_one.pk,
+            name="about",
+            display_name="About",
+            content="<p>Test page content</p>",
+        )
+
     # Helper function for email subjects
     def get_default_email_subject(self, setting_name, journal=None):
         journal = journal or self.journal_one
@@ -234,6 +247,10 @@ class SitemapTests(UtilsTests):
         <loc>http://localhost/TST/issue/{}_sitemap.xml</loc>
     </sitemap>
     
+    <sitemap>
+        <loc>http://localhost/TST/pages_sitemap.xml</loc>
+    </sitemap>
+    
 </sitemapindex>""".format(self.issue_one.pk)
         file = io.StringIO()
         generate_sitemap(
@@ -242,6 +259,29 @@ class SitemapTests(UtilsTests):
         )
         self.assertEqual(
             expected_journal_sitemap,
+            file.getvalue(),
+        )
+
+    @override_settings(URL_CONFIG="path")
+    def test_pages_sitemap_generation(self):
+        expected_pages_sitemap = """<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/static/common/xslt/sitemap.xsl"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    
+    <url>
+        <loc>http://localhost/TST/site/about/</loc>
+        <lastmod>{}</lastmod>
+        <changefreq>monthly</changefreq>
+    </url>
+    
+</urlset>""".format(self.cms_page.edited.strftime("%Y-%m-%d"))
+        file = io.StringIO()
+        generate_sitemap(
+            file=file,
+            pages=self.journal_one,
+        )
+        self.assertEqual(
+            expected_pages_sitemap,
             file.getvalue(),
         )
 

@@ -206,7 +206,13 @@ def get_log_entries(object):
 
 
 def generate_sitemap(
-    file, press=None, journal=None, repository=None, issue=None, subject=None
+    file,
+    press=None,
+    journal=None,
+    repository=None,
+    issue=None,
+    subject=None,
+    pages=None,
 ):
     """
     Returns a rendered sitemap
@@ -243,6 +249,19 @@ def generate_sitemap(
         context = {
             "subject": subject,
         }
+    elif pages:
+        from cms import models as cms_models
+
+        content_type = ContentType.objects.get_for_model(pages)
+        page_objects = cms_models.Page.objects.filter(
+            content_type=content_type,
+            object_id=pages.pk,
+        )
+        template = "common/pages_sitemap.xml"
+        context = {
+            "journal": pages,
+            "pages": page_objects,
+        }
 
     if template and context:
         content = render_to_string(
@@ -251,7 +270,7 @@ def generate_sitemap(
         )
         file.write(content)
     else:
-        return "Must pass a press, journal, issue, repository or subject object."
+        return "Must pass a press, journal, issue, repository, subject or pages object."
 
 
 def get_sitemap_path(path_parts, file_name):
@@ -288,6 +307,16 @@ def write_issue_sitemap(issue):
     )
     with open(issue_file_path, "w") as file:
         generate_sitemap(file, issue=issue)
+        file.close()
+
+
+def write_pages_sitemap(journal):
+    pages_file_path = get_sitemap_path(
+        path_parts=[journal.code],
+        file_name="pages_sitemap.xml",
+    )
+    with open(pages_file_path, "w") as file:
+        generate_sitemap(file, pages=journal)
         file.close()
 
 
