@@ -426,10 +426,10 @@ class GeneratedPluginSettingForm(forms.Form):
 
 class GeneratedSettingForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        settings = kwargs.pop("settings", None)
+        self.settings = kwargs.pop("settings", [])
         super(GeneratedSettingForm, self).__init__(*args, **kwargs)
         self.translatable_field_names = []
-        for field in settings:
+        for field in self.settings:
             object = field["object"]
 
             if object.setting.types == "char":
@@ -482,7 +482,14 @@ class GeneratedSettingForm(forms.Form):
 
     def save(self, journal, group, commit=True):
         for setting_name, setting_value in self.cleaned_data.items():
-            setting_handler.save_setting(group, setting_name, journal, setting_value)
+            group_name = next(
+                (
+                    setting_item["group_name"] for setting_item in self.settings
+                    if setting_item.get("name") == setting_name and "group_name" in setting_item
+                ),
+                group
+            )
+            setting_handler.save_setting(group_name, setting_name, journal, setting_value)
 
 
 class JournalAttributeForm(JanewayTranslationModelForm, KeywordModelForm):
