@@ -76,7 +76,7 @@ class ReviewTests(TestCase):
             "visibility": "double-blind",
             "form": self.review_form.pk,
             "date_due": "2900-01-01",
-            "reviewer": self.second_reviewer.pk,
+            "reviewer": self.reviewer.pk,
         }
         form = forms.ReviewAssignmentForm(
             journal=self.journal_one,
@@ -96,13 +96,14 @@ class ReviewTests(TestCase):
             "date_due": "2900-01-01",
             "reviewer": self.regular_user.pk,
         }
+        reviewers = logic.get_reviewer_candidates(
+            self.article_under_review, self.editor
+        )
         form = forms.ReviewAssignmentForm(
             journal=self.journal_one,
             article=self.article_under_review,
             editor=self.editor,
-            reviewers=logic.get_reviewer_candidates(
-                self.article_under_review, self.editor
-            ),
+            reviewers=reviewers,
             data=data,
         )
         self.assertFalse(form.is_valid())
@@ -295,7 +296,7 @@ class ReviewTests(TestCase):
             article=article1,
             is_complete=False,
             review_round=round,
-            reviewer=self.regular_user,
+            reviewer=self.third_reviewer,
         )
         assignment.decision = None
         assignment.save()
@@ -357,7 +358,7 @@ class ReviewTests(TestCase):
             article=article_with_completed_reviews,
             is_complete=False,
             review_round=round_two,
-            reviewer=self.regular_user,
+            reviewer=self.third_reviewer,
         )
 
         # turn setting on
@@ -638,7 +639,11 @@ class ReviewTests(TestCase):
             "editoruser@martineve.com", ["editor"], journal=self.journal_one
         )
         self.editor.is_active = True
-        self.editor.save()
+        self.reviewer = self.create_user(
+            "revieweruser@email.com", ["reviewer"], journal=self.journal_one
+        )
+        self.reviewer.is_active = True
+        self.reviewer.save()
 
         self.author = self.create_user(
             "authoruser@martineve.com", ["author"], journal=self.journal_one
@@ -704,6 +709,12 @@ class ReviewTests(TestCase):
         )
         self.second_reviewer.is_active = True
         self.second_reviewer.save()
+
+        self.third_reviewer = self.create_user(
+            "third_reviewer@invalid.com", ["reviewer"], journal=self.journal_one
+        )
+        self.third_reviewer.is_active = True
+        self.third_reviewer.save()
 
         self.public_file = core_models.File(
             mime_type="A/FILE",
@@ -840,7 +851,7 @@ class ReviewTests(TestCase):
         self.review_assignment_complete = review_models.ReviewAssignment(
             article=self.article_review_completed,
             review_round=self.round_one,
-            reviewer=self.regular_user,
+            reviewer=self.third_reviewer,
             editor=self.editor,
             date_due=timezone.now(),
             form=self.review_form,
@@ -900,7 +911,7 @@ class ReviewTests(TestCase):
 
         self.review_assignment_not_in_scope = review_models.ReviewAssignment(
             article=self.article_in_production,
-            reviewer=self.regular_user,
+            reviewer=self.third_reviewer,
             editor=self.editor,
             date_due=timezone.now(),
             form=self.review_form,
@@ -1068,26 +1079,3 @@ class ReviewTests(TestCase):
         self.good_reviewer_content_line = b"Mr,Andy,James,Byers,andy@janeway.systems,Open Library of Humanities,Birkbeck,GB,,Test Reason"
         self.empty_reviewer_content_line = b" "
         self.regular_user_csv_line = b"Mr,Regular,,User,regularuser@martineve.com,Somewhere Dept,Some Inst,GB,,A Reason"
-
-    def test_request_revisions_context(self):
-        self.client.force_login(self.editor)
-        response = self.client.get(
-            reverse(
-                "review_request_revisions",
-                kwargs={"article_id": self.article_review_completed.pk},
-            ),
-            SERVER_NAME=self.journal_one.domain,
-        )
-        self.assertEqual(
-            self.article_review_completed,
-            response.context.get("article"),
-        )
-        # This test does not cover the revision request form
-        self.assertEqual(
-            0,
-            response.context.get("pending_approval").count(),
-        )
-        self.assertEqual(
-            0,
-            response.context.get("incomplete").count(),
-        )

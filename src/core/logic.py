@@ -844,11 +844,20 @@ def handle_email_change(request, email_address, next_url=""):
         context,
         "user_email_change",
     )
+    log_dict = {
+        "level": "Info",
+        "action_text": "Email change confirmation sent to {0}".format(
+            request.user.email,
+        ),
+        "types": "Email Change Confirmation",
+        "target": request.user,
+    }
     notify_helpers.send_email_with_body_from_user(
         request,
         "subject_user_email_change",
         request.user.email,
         message,
+        log_dict=log_dict,
     )
 
     logout(request)
@@ -1020,22 +1029,27 @@ def password_policy_check(request):
     password = request.POST.get("password_1")
 
     rules = [
-        lambda s: len(password) >= request.press.password_length
-        or _("Your password must be {} characters long").format(
-            request.press.password_length
+        lambda s: (
+            len(password) >= request.press.password_length
+            or _("Your password must be {} characters long").format(
+                request.press.password_length
+            )
         )
     ]
 
     if request.press.password_upper:
         rules.append(
-            lambda password: any(x.isupper() for x in password)
-            or _("An uppercase character is required")
+            lambda password: (
+                any(x.isupper() for x in password)
+                or _("An uppercase character is required")
+            )
         )
 
     if request.press.password_number:
         rules.append(
-            lambda password: any(x.isdigit() for x in password)
-            or _("A number is required")
+            lambda password: (
+                any(x.isdigit() for x in password) or _("A number is required")
+            )
         )
 
     problems = [p for p in [r(password) for r in rules] if p != True]
