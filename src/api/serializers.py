@@ -6,6 +6,10 @@ from submission import models as submission_models
 from repository import models as repository_models
 
 
+from django.utils import timezone
+from submission.models import STAGE_PUBLISHED
+
+
 class LicenceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = submission_models.Licence
@@ -107,6 +111,21 @@ class PreprintSupplementaryFileSerializer(serializers.ModelSerializer):
 
 
 class IssueSerializer(serializers.HyperlinkedModelSerializer):
+    articles = serializers.SerializerMethodField()
+
+    def get_articles(self, obj):
+        now = timezone.now()
+        qs = obj.articles.filter(
+            stage=STAGE_PUBLISHED,
+            date_published__lte=now,
+        )
+        field = serializers.HyperlinkedRelatedField(
+            view_name="article-detail",
+            read_only=True,
+        )
+        field._context = self.context
+        return [field.to_representation(a) for a in qs]
+
     class Meta:
         model = journal_models.Issue
         fields = (
