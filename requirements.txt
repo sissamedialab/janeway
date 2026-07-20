@@ -51,7 +51,7 @@ psycopg[binary]~=3.3.4
 pyasn1==0.6.3
 pycparser==2.14
 PyJWT==2.13.0
-Pillow==12.2.0
+Pillow==12.3.0
 python-crontab==2.2.3
 python-dateutil~=2.8.2
 python-docx==0.8.11
