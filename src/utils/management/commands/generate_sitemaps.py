@@ -65,6 +65,10 @@ class Command(ProfiledCommand):
                     for issue in tqdm(journal.published_issues):
                         logic.write_issue_sitemap(issue)
 
+                # Generate Pages Sitemap
+                print(f"Generating pages sitemap for {journal.name}")
+                logic.write_pages_sitemap(journal)
+
         # Generate Repo Sitemap
         if repositories:
             print("Generating sitemaps for repositories")

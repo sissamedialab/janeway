@@ -390,6 +390,11 @@ urlpatterns = [
         name="journal_sitemap",
     ),
     re_path(
+        r"^pages_sitemap.xml$",
+        journal_views.pages_sitemap,
+        name="journal_pages_sitemap",
+    ),
+    re_path(
         r"^subject/(?P<subject_id>\d+)_sitemap.xml$",
         repository_views.sitemap,
         name="repository_sitemap",

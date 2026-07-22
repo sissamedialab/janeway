@@ -2198,6 +2198,23 @@ def sitemap(request, issue_id=None):
     )
 
 
+@has_journal
+def pages_sitemap(request):
+    """
+    Renders an XML sitemap based on CMS pages available to the journal.
+    :param request: HttpRequest object
+    :return: HttpResponse object
+    """
+    path_parts = [
+        request.journal.code,
+        "pages_sitemap.xml",
+    ]
+    return core_views.sitemap(
+        request,
+        path_parts,
+    )
+
+
 @decorators.frontend_enabled
 def search(request):
     if settings.ENABLE_FULL_TEXT_SEARCH:
