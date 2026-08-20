@@ -2564,30 +2564,40 @@ class Article(AbstractLastModifiedModel):
         lang = Lang(self.language)
         return lang.pt1 or "en"
 
-    def erratum_of(self):
+    def update_of(self):
         """
-        Return the "parent" article for which this article is an erratum.
+        Return the relation whose "from-article" this article is an update of.
+
+        Only the *editorially significant* relations listed in
+        hydra.models.CROSSREF_UPDATES are considered: the idea is that, if this
+        article is an erratum of X, then it cannot be an addendum of Y at the
+        same time.
 
         This is intended to be used in
         templates/common/identifiers/crossref_article.xml
+
+        There is no need to check if the "from-article" was published: the
+        business logic should ensure that we cannot publish an erratum to a
+        non-published paper.
         """
-        if self.section.name != "Erratum":
+        # Silently return nothing if the Hydra plugin is not available
+        try:
+            from plugins.hydra.models import CROSSREF_UPDATES, LinkedArticle
+        except ImportError:
             return None
 
-        # ATM, the "Genealogy" model is not in Janeway core.
-        if not hasattr(self, "ancestors"):
-            return None
+        relations = LinkedArticle.objects.filter(
+            to_article=self,
+            relationship__in=CROSSREF_UPDATES,
+        )
+        if relations.count() > 1:
+            # We prefer to carry on with the deposit, but someone should have a look at this
+            logger.error(
+                f"Article {self.pk} has multiple personalities: "
+                f"{[(r.from_article_id, r.relationship) for r in relations]}"
+            )
 
-        if not self.ancestors.exists():
-            return None
-
-        # We can safely assume that an erratum refers to only one other paper
-        # so we just return the first "ancestor".
-        #
-        # Also, there is no need to check if the "parent" was published:
-        # the business logic should ensure that we cannot publish an erratum
-        # to a non-published paper.
-        return self.ancestors.first().parent
+        return relations.first()
 
 
 class FrozenAuthorQueryset(model_utils.AffiliationCompatibleQueryset):

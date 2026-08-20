@@ -6,4 +6,7 @@
         <loc>{{ journal.site_url }}{% url 'journal_sitemap' issue.pk %}</loc>
     </sitemap>
     {% endfor %}
+    <sitemap>
+        <loc>{{ journal.site_url }}{% url 'journal_pages_sitemap' %}</loc>
+    </sitemap>
 </sitemapindex>

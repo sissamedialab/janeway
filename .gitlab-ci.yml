@@ -29,7 +29,58 @@ include:
     file: '.gitlab-ci-run-tests.yml'
 
 
-deploy_to_test:
+# ======================
+# Deploy to T1-T5
+# ======================
+.deploy-to-test-template:
+  extends:
+    - .deploy
+  when: manual
+  variables:
+    SERVER_IP: "$TEST_SERVER_IP"
+    SERVER_USER: "$TEST_SERVER_USER"
+    TEST_INSTANCE: "t1"
+    DEPLOY_CMD: "deploy-${TEST_INSTANCE}-janeway:${CI_COMMIT_SHA}"
+
+
+Deploy to T1:
+  environment: T1
+  extends:
+    - .deploy-to-test-template
+  variables:
+    TEST_INSTANCE: "t1"
+
+Deploy to T2:
+  environment: T2
+  extends:
+    - .deploy-to-test-template
+  variables:
+    TEST_INSTANCE: "t2"
+
+Deploy to T3:
+  environment: T3
+  extends:
+    - .deploy-to-test-template
+  variables:
+    TEST_INSTANCE: "t3"
+
+Deploy to T4:
+  environment: T4
+  extends:
+    - .deploy-to-test-template
+  variables:
+    TEST_INSTANCE: "t4"
+
+Deploy to T5:
+  environment: T5
+  extends:
+    - .deploy-to-test-template
+  variables:
+    TEST_INSTANCE: "t5"
+
+
+
+Deploy to dev:
   extends:
     - .deploy
   tags:
@@ -37,27 +88,9 @@ deploy_to_test:
   variables:
     SERVER_IP: "$TEST_SERVER_IP"
     SERVER_USER: "$TEST_SERVER_USER"
-    DEPLOY_CMD: "deploy-test-janeway:${CI_COMMIT_SHA}"
+    DEPLOY_CMD: "deploy-dev-janeway"
   environment:
-    name: development
-    url: https://wjs-test-test-journals.wjapp.it/
-  rules:
-    - if: $CI_COMMIT_REF_NAME == "wjs-develop"
-      when: on_success
-    - when: manual
-
-
-deploy_to_dev:
-  extends:
-    - .deploy
-  tags:
-    - inasset
-  variables:
-    SERVER_IP: "$TEST_SERVER_IP"
-    SERVER_USER: "$TEST_SERVER_USER"
-    DEPLOY_CMD: "deploy-dev-janeway:${CI_COMMIT_SHA}"
-  environment:
-    name: development
+    name: dev
     url: https://wjs-test-dev-journals.wjapp.it/
   rules:
     - if: $CI_COMMIT_REF_NAME == "wjs-develop"
@@ -65,7 +98,7 @@ deploy_to_dev:
     - when: manual
 
 
-deploy_to_pp:
+Deploy to pp:
   extends:
     - .deploy
   tags:
@@ -83,7 +116,7 @@ deploy_to_pp:
     - when: manual
 
 
-deploy_to_production:
+Deploy to production:
   extends:
     - .deploy
   tags:
@@ -135,7 +168,7 @@ deploy_to_production:
     - docker build --tag $TAG --cache-from $TAG --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN --build-arg BRANCH=$CI_COMMIT_REF_NAME --file ./dockerfiles/Dockerfile.wjs ./dockerfiles
     - docker push $TAG
 
-build_janeway_image_wjs_develop:
+Build Janeway image from wjs-develop:
   extends:
     - .build_janeway_image
   variables:
@@ -147,7 +180,7 @@ build_janeway_image_wjs_develop:
       when: manual
       allow_failure: true
 
-build_janeway_image_wjs_production:
+Build Janeway image from wjs-production:
   extends:
     - .build_janeway_image
   variables:
@@ -159,11 +192,20 @@ build_janeway_image_wjs_production:
       when: manual
       allow_failure: true
 
+Build Janeway image from commit:
+  extends:
+    - .build_janeway_image
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/debian-python-git-janeway:${CI_COMMIT_SHA}"
+  rules:
+    - when: manual
+      allow_failure: true
+
 
 
 # This job tests the Janeway code from the commit that triggered it (see below):
 # the code baked into the image is replaced with the current checkout.
-run-tests-on-security-updates:
+Run tests on security updates:
   when: manual
   extends:
     - .run-tests
