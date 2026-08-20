@@ -54,13 +54,14 @@
                 <item_number item_number_type="article_number">{{ article.object.pk }}</item_number>
             </publisher_item>
 
-            {% if article.object.erratum_of %}
+            {% if article.object.update_of %}
             <crossmark>
               {# Crossref informed that the crossmark-policy DOI is not used and that the paper's DOI can be used instead to fulfill the XML schema requirements. #}
               {# Here we use a harmless non-existent DOI, which is less confusing. #}
               <crossmark_policy>{{ article.object.journal|setting:'crossref_prefix' }}/not-used</crossmark_policy>
               <updates>
-                <update type="erratum" date="{{ now|date:"Y-m-d" }}">{{ article.object.erratum_of.get_doi }}</update>
+                {# The relation is stored by the Hydra plugin and its values match Crossref's `update/@type` enumeration. #}
+                <update type="{{ article.object.update_of.relationship }}" date="{{ now|date:"Y-m-d" }}">{{ article.object.update_of.from_article.get_doi }}</update>
               </updates>
               {% if article.object.funders.exists %}
               <custom_metadata>
