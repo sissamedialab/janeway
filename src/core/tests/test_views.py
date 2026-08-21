@@ -3,6 +3,7 @@ __author__ = "Open Library of Humanities"
 __license__ = "AGPL v3"
 __maintainer__ = "Open Library of Humanities"
 
+import datetime
 from unittest.mock import patch
 from uuid import uuid4
 from django.urls.base import clear_script_prefix
@@ -891,8 +892,8 @@ class ControlledAffiliationDisplayTests(CoreViewTestsWithData):
             organization=org,
             title="Reader",
             department="English",
-            start=timezone.datetime(2010, 5, 5, tzinfo=timezone.utc),
-            end=timezone.datetime(2016, 10, 15, tzinfo=timezone.utc),
+            start=timezone.datetime(2010, 5, 5, tzinfo=datetime.timezone.utc),
+            end=timezone.datetime(2016, 10, 15, tzinfo=datetime.timezone.utc),
         )
         context = {
             "affiliation": affil,
@@ -1033,7 +1034,7 @@ class ControlledAffiliationDisplayTests(CoreViewTestsWithData):
         affil = core_models.ControlledAffiliation.objects.create(
             account=self.user,
             title="Independent scholar",
-            start=timezone.datetime(2010, 5, 5, tzinfo=timezone.utc),
+            start=timezone.datetime(2010, 5, 5, tzinfo=datetime.timezone.utc),
         )
         context = {
             "affiliation": affil,
@@ -1050,7 +1051,7 @@ class ControlledAffiliationDisplayTests(CoreViewTestsWithData):
         affil = core_models.ControlledAffiliation.objects.create(
             account=self.user,
             title="Independent scholar",
-            end=timezone.datetime(2016, 10, 15, tzinfo=timezone.utc),
+            end=timezone.datetime(2016, 10, 15, tzinfo=datetime.timezone.utc),
         )
         context = {
             "affiliation": affil,
