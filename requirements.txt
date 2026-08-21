@@ -37,7 +37,6 @@ libsass==0.23.0
 lxml==6.0.0
 markdown~=3.10.2
 maxminddb==2.5.1
-mock
 mozilla-django-oidc==4.0.1
 orcid==1.0.3
 packaging~=25.0
