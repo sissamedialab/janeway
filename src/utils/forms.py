@@ -17,8 +17,8 @@ from django.utils.safestring import mark_safe
 
 from dal_select2.widgets import ModelSelect2Multiple
 from modeltranslation import forms as mt_forms, translator
-from captcha.fields import ReCaptchaField
-from captcha.widgets import ReCaptchaV2Checkbox as ReCaptchaWidget
+from django_recaptcha.fields import ReCaptchaField
+from django_recaptcha.widgets import ReCaptchaV2Checkbox as ReCaptchaWidget
 from simplemathcaptcha.fields import MathCaptchaField
 from hcaptcha.fields import hCaptchaField
 
