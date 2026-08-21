@@ -3,7 +3,7 @@ __author__ = "Open Library of Humanities"
 __license__ = "AGPL v3"
 __maintainer__ = "Open Library of Humanities"
 
-from mock import patch
+from unittest.mock import patch
 from uuid import uuid4
 from django.urls.base import clear_script_prefix
 from django.shortcuts import reverse
