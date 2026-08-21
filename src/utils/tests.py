@@ -4,9 +4,13 @@ __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 import io
+import json
 import os
+import shutil
+import tempfile
 
 from django.apps import apps
+from django.conf import settings
 from django.http import QueryDict
 from django.test import TestCase, override_settings
 from django.utils import timezone, translation
@@ -17,6 +21,7 @@ from django.contrib.admin.sites import site
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.template.engine import Engine
+from requests.exceptions import HTTPError
 
 import mock
 from utils import (
@@ -32,6 +37,7 @@ from utils.orcid import (
     build_redirect_uri,
     encode_state,
     decode_state,
+    retrieve_tokens,
 )
 
 from utils import install
@@ -184,9 +190,7 @@ class UtilsTests(TestCase):
         cls.issue_one.articles.add(cls.article_one)
 
         # Setup a CMS page for sitemap testing
-        cls.journal_content_type = ContentType.objects.get_for_model(
-            cls.journal_one
-        )
+        cls.journal_content_type = ContentType.objects.get_for_model(cls.journal_one)
         cls.cms_page, created = cms_models.Page.objects.get_or_create(
             content_type=cls.journal_content_type,
             object_id=cls.journal_one.pk,
@@ -1417,6 +1421,59 @@ class TestORCiDRecord(TestCase):
             build_redirect_uri(repo), "http://repo.domain.com/login/orcid/"
         )
 
+    @mock.patch("utils.orcid.build_redirect_uri")
+    @mock.patch("utils.orcid.requests.post")
+    def test_retrieve_tokens_success(self, mock_post, mock_build_redirect_uri):
+        mock_build_redirect_uri.return_value = "https://example.org/login/orcid/"
+        mock_response = mock.Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.text = json.dumps(
+            {
+                "access_token": "e0f1c9b2-1111-2222-3333-444455556666",
+                "token_type": "bearer",
+                "refresh_token": "aaaa1111-bbbb-2222-cccc-333344445555",
+                "expires_in": 631138518,
+                "scope": "/authenticate",
+                "name": "Sofia Garcia",
+                "orcid": "0000-0002-1825-0097",
+            }
+        )
+        mock_post.return_value = mock_response
+        fake_site = mock.Mock()
+
+        orcid_id = retrieve_tokens("a-real-looking-auth-code", fake_site)
+
+        self.assertEqual(orcid_id, "0000-0002-1825-0097")
+        mock_response.raise_for_status.assert_called_once()
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        self.assertEqual(args[0], settings.ORCID_TOKEN_URL)
+        self.assertEqual(kwargs["data"]["code"], "a-real-looking-auth-code")
+        self.assertEqual(kwargs["data"]["client_id"], settings.ORCID_CLIENT_ID)
+        self.assertEqual(kwargs["data"]["client_secret"], settings.ORCID_CLIENT_SECRET)
+        self.assertEqual(kwargs["data"]["grant_type"], "authorization_code")
+        self.assertEqual(
+            kwargs["data"]["redirect_uri"], "https://example.org/login/orcid/"
+        )
+
+    @mock.patch("utils.orcid.build_redirect_uri")
+    @mock.patch("utils.orcid.requests.post")
+    def test_retrieve_tokens_http_error_returns_none(
+        self, mock_post, mock_build_redirect_uri
+    ):
+        mock_build_redirect_uri.return_value = "https://example.org/login/orcid/"
+        mock_response = mock.Mock()
+        mock_response.raise_for_status.side_effect = HTTPError(
+            "401 Client Error: Unauthorized"
+        )
+        mock_post.return_value = mock_response
+        fake_site = mock.Mock()
+
+        orcid_id = retrieve_tokens("a-bad-auth-code", fake_site)
+
+        self.assertIsNone(orcid_id)
+        mock_response.raise_for_status.assert_called_once()
+
 
 class URLLogicTests(TestCase):
     @classmethod
@@ -1702,3 +1759,96 @@ class CheckMailgunStatCommandTests(TestCase):
         call_command("check_mailgun_stat")
         self.log_entry.refresh_from_db()
         self.assertEqual(self.log_entry.message_status, "accepted")
+
+
+class BackupCommandS3Tests(TestCase):
+    """
+    Covers the S3-upload path of `utils.management.commands.backup`, which
+    still uses boto (v2) rather than boto3. The connection is mocked out so
+    the test never touches a real S3 endpoint.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.superuser = helpers.create_user(
+            "backup-superuser@example.org",
+            is_superuser=True,
+            is_active=True,
+        )
+
+    def setUp(self):
+        self.tmp_base_dir = tempfile.mkdtemp()
+        self.override = override_settings(
+            BASE_DIR=self.tmp_base_dir,
+            BACKUP_TYPE="s3",
+            BACKUP_EMAIL=True,
+            END_POINT="eu-west-2",
+            S3_HOST="s3.eu-west-2.amazonaws.com",
+            S3_ACCESS_KEY="test-access-key",
+            S3_SECRET_KEY="test-secret-key",
+            S3_BUCKET_NAME="test-bucket",
+        )
+        self.override.enable()
+        self.addCleanup(self.override.disable)
+        self.addCleanup(shutil.rmtree, self.tmp_base_dir, True)
+
+    @mock.patch("utils.management.commands.backup.boto.s3.connect_to_region")
+    @mock.patch("utils.management.commands.backup.call_command")
+    def test_handle_s3_upload_success_sends_superuser_email(
+        self, mock_dumpdata, connect_to_region
+    ):
+        # `dumpdata` itself is unrelated to the S3 upload path under test,
+        # and (on this branch) chokes on core.PGFileText -- a
+        # required_db_vendor="postgresql" model with no table under the
+        # SQLite test backend. Stub it out so this test isolates the S3
+        # code path rather than that pre-existing, unrelated quirk.
+        mock_bucket = mock.Mock()
+        mock_s3_connection = mock.Mock()
+        mock_s3_connection.get_bucket.return_value = mock_bucket
+        connect_to_region.return_value = mock_s3_connection
+        mock_key_instance = mock.Mock()
+
+        with mock.patch(
+            "utils.management.commands.backup.Key",
+            return_value=mock_key_instance,
+        ) as mock_key_cls:
+            call_command("backup")
+
+        connect_to_region.assert_called_once_with(
+            "eu-west-2",
+            aws_access_key_id="test-access-key",
+            aws_secret_access_key="test-secret-key",
+            host="s3.eu-west-2.amazonaws.com",
+        )
+        mock_s3_connection.get_bucket.assert_called_once_with("test-bucket")
+        mock_key_cls.assert_called_once_with(mock_bucket)
+        self.assertTrue(mock_key_instance.key.startswith("backups/"))
+        self.assertTrue(mock_key_instance.key.endswith(".zip"))
+
+        self.assertEqual(mock_key_instance.set_contents_from_file.call_count, 1)
+        args, kwargs = mock_key_instance.set_contents_from_file.call_args
+        self.assertEqual(kwargs.get("num_cb"), 200)
+        self.assertTrue(callable(kwargs.get("cb")))
+
+        self.assertEqual(len(mail.outbox), 1)
+        sent_email = mail.outbox[0]
+        self.assertEqual(sent_email.subject, "Backup")
+        self.assertIn(self.superuser.email, sent_email.to)
+        self.assertIn("successfully completed", sent_email.body)
+
+    @mock.patch("utils.management.commands.backup.boto.s3.connect_to_region")
+    @mock.patch("utils.management.commands.backup.call_command")
+    def test_handle_s3_upload_failure_sends_error_email(
+        self, mock_dumpdata, connect_to_region
+    ):
+        connect_to_region.side_effect = Exception("Could not reach S3 endpoint")
+
+        call_command("backup")
+
+        connect_to_region.assert_called_once()
+        self.assertEqual(len(mail.outbox), 1)
+        sent_email = mail.outbox[0]
+        self.assertEqual(sent_email.subject, "Backup")
+        self.assertIn(self.superuser.email, sent_email.to)
+        self.assertIn("There was an error during the backup process", sent_email.body)
+        self.assertIn("Could not reach S3 endpoint", sent_email.body)
