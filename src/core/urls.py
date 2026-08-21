@@ -4,6 +4,7 @@ __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 
+from django.apps import apps
 from django.urls import include, re_path, path
 from django.contrib import admin
 from django.conf import settings
@@ -27,21 +28,28 @@ urlpatterns = [
 
 try:
     if settings.DEBUG or settings.IN_TEST_RUNNER:
-        import debug_toolbar
-
         urlpatterns += [
             re_path(
                 r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}
             ),
             path("404/", error_views.handler404),
             path("500/", error_views.handler500),
-            path("__debug__/", include("debug_toolbar.urls")),
             path(
                 "preview/article/<int:article_id>/jats/",
                 view_jats_stub,
                 name="view_jats_stub",
             ),
         ]
+
+        # django-debug-toolbar 7.x ships a real HistoryEntry model, so merely
+        # importing debug_toolbar.urls raises RuntimeError unless the app is
+        # registered. Route it only when it actually is: dev_settings adds it
+        # for DEBUG, janeway_global_settings adds it under the test runner, and
+        # a hand-written settings.py with DEBUG=True may add neither.
+        if apps.is_installed("debug_toolbar"):
+            urlpatterns += [
+                path("__debug__/", include("debug_toolbar.urls")),
+            ]
 
         try:
             urlpatterns += [
