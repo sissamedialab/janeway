@@ -4,7 +4,10 @@ __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
 import datetime
+import io
 import os
+
+from docx import Document
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -1079,3 +1082,86 @@ class ReviewTests(TestCase):
         self.good_reviewer_content_line = b"Mr,Andy,James,Byers,andy@janeway.systems,Open Library of Humanities,Birkbeck,GB,,Test Reason"
         self.empty_reviewer_content_line = b" "
         self.regular_user_csv_line = b"Mr,Regular,,User,regularuser@martineve.com,Somewhere Dept,Some Inst,GB,,A Reason"
+
+
+class TestServeReviewFile(TestCase):
+    """
+    Covers review.logic.serve_review_file(), which builds a .docx
+    representation of a review form using python-docx.
+    """
+
+    def setUp(self):
+        self.temp_dir = os.path.join(settings.BASE_DIR, "files", "temp")
+        os.makedirs(self.temp_dir, exist_ok=True)
+
+        self.journal_one, self.journal_two = helpers.create_journals()
+        self.review_form = helpers.create_review_form(self.journal_one)
+
+        self.form_element = review_models.ReviewFormElement.objects.create(
+            name="Element With Choices",
+            kind="select",
+            order=1,
+            required=True,
+            help_text="Please pick one of the options below.",
+            choices="Yes|No|Maybe",
+        )
+        self.review_form.elements.add(self.form_element)
+
+        self.review_assignment = helpers.create_review_assignment(
+            journal=self.journal_one,
+            review_form=self.review_form,
+        )
+
+    def test_serve_review_file_generates_expected_docx(self):
+        response = logic.serve_review_file(self.review_assignment)
+
+        # StreamingHttpResponse: consume the streamed content into bytes.
+        content = b"".join(response.streaming_content)
+        document = Document(io.BytesIO(content))
+
+        headings = [
+            paragraph
+            for paragraph in document.paragraphs
+            if paragraph.style.name in ("Title", "Heading 1", "Heading 2")
+        ]
+
+        # The top-level heading uses add_heading(text, 0), which in the
+        # installed python-docx maps to the "Title" style.
+        self.assertEqual(
+            headings[0].text,
+            "Review #{pk}".format(pk=self.review_assignment.pk),
+        )
+        self.assertEqual(headings[0].style.name, "Title")
+
+        self.assertEqual(
+            headings[1].text,
+            "Review of `{article_title}`".format(
+                article_title=self.review_assignment.article.title
+            ),
+        )
+        self.assertEqual(headings[1].style.name, "Heading 1")
+
+        self.assertEqual(headings[2].text, self.form_element.name)
+        self.assertEqual(headings[2].style.name, "Heading 2")
+
+        # The element has choices, so a 2-column table should have been
+        # rendered with a header row plus one row per choice.
+        self.assertEqual(len(document.tables), 1)
+        table = document.tables[0]
+        self.assertEqual(table.rows[0].cells[0].text, "Choice")
+        self.assertEqual(table.rows[0].cells[1].text, "Indication")
+
+        choice_texts = [row.cells[0].text for row in table.rows[1:]]
+        self.assertEqual(choice_texts, ["Yes", "No", "Maybe"])
+
+    def test_serve_review_file_response_headers(self):
+        response = logic.serve_review_file(self.review_assignment)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertIn(".docx", response["Content-Disposition"])
+        # Consume the stream so the file handle underlying the temp file
+        # (already unlinked by serve_temp_file) is closed cleanly.
+        b"".join(response.streaming_content)
