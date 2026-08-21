@@ -2,6 +2,8 @@
 # You should change this key before you go live!
 import os
 
+from core.janeway_global_settings import IN_TEST_RUNNER
+
 DEBUG = True
 SECRET_KEY = "uxprsdhk^gzd-r=_287byolxn)$k6tsd8_cepl^s^tms2w1qrv"
 
@@ -20,9 +22,10 @@ MIDDLEWARE = (
     "utils.middleware.TimeMonitoring",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
 )
-INSTALLED_APPS = [
-    "debug_toolbar",
-]
+# INSTALLED_APPS is merged, not replaced, and janeway_global_settings already
+# registers debug_toolbar under the test runner. Adding it again there would
+# raise ImproperlyConfigured for the duplicate app label.
+INSTALLED_APPS = [] if IN_TEST_RUNNER else ["debug_toolbar"]
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
