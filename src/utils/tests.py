@@ -1764,8 +1764,8 @@ class CheckMailgunStatCommandTests(TestCase):
 class BackupCommandS3Tests(TestCase):
     """
     Covers the S3-upload path of `utils.management.commands.backup`, which
-    still uses boto (v2) rather than boto3. The connection is mocked out so
-    the test never touches a real S3 endpoint.
+    uses boto3. The client is mocked out so the test never touches a real
+    S3 endpoint.
     """
 
     @classmethod
@@ -1792,43 +1792,36 @@ class BackupCommandS3Tests(TestCase):
         self.addCleanup(self.override.disable)
         self.addCleanup(shutil.rmtree, self.tmp_base_dir, True)
 
-    @mock.patch("utils.management.commands.backup.boto.s3.connect_to_region")
+    @mock.patch("utils.management.commands.backup.boto3.client")
     @mock.patch("utils.management.commands.backup.call_command")
     def test_handle_s3_upload_success_sends_superuser_email(
-        self, mock_dumpdata, connect_to_region
+        self, mock_dumpdata, mock_client
     ):
         # `dumpdata` itself is unrelated to the S3 upload path under test,
         # and (on this branch) chokes on core.PGFileText -- a
         # required_db_vendor="postgresql" model with no table under the
         # SQLite test backend. Stub it out so this test isolates the S3
         # code path rather than that pre-existing, unrelated quirk.
-        mock_bucket = mock.Mock()
-        mock_s3_connection = mock.Mock()
-        mock_s3_connection.get_bucket.return_value = mock_bucket
-        connect_to_region.return_value = mock_s3_connection
-        mock_key_instance = mock.Mock()
+        mock_s3_client = mock.Mock()
+        mock_client.return_value = mock_s3_client
 
-        with mock.patch(
-            "utils.management.commands.backup.Key",
-            return_value=mock_key_instance,
-        ) as mock_key_cls:
-            call_command("backup")
+        call_command("backup")
 
-        connect_to_region.assert_called_once_with(
-            "eu-west-2",
+        mock_client.assert_called_once_with(
+            "s3",
+            region_name="eu-west-2",
+            endpoint_url="https://s3.eu-west-2.amazonaws.com",
             aws_access_key_id="test-access-key",
             aws_secret_access_key="test-secret-key",
-            host="s3.eu-west-2.amazonaws.com",
         )
-        mock_s3_connection.get_bucket.assert_called_once_with("test-bucket")
-        mock_key_cls.assert_called_once_with(mock_bucket)
-        self.assertTrue(mock_key_instance.key.startswith("backups/"))
-        self.assertTrue(mock_key_instance.key.endswith(".zip"))
 
-        self.assertEqual(mock_key_instance.set_contents_from_file.call_count, 1)
-        args, kwargs = mock_key_instance.set_contents_from_file.call_args
-        self.assertEqual(kwargs.get("num_cb"), 200)
-        self.assertTrue(callable(kwargs.get("cb")))
+        self.assertEqual(mock_s3_client.upload_fileobj.call_count, 1)
+        args, kwargs = mock_s3_client.upload_fileobj.call_args
+        f, bucket, key = args[0], args[1], args[2]
+        self.assertEqual(bucket, "test-bucket")
+        self.assertTrue(key.startswith("backups/"))
+        self.assertTrue(key.endswith(".zip"))
+        self.assertTrue(callable(kwargs.get("Callback")))
 
         self.assertEqual(len(mail.outbox), 1)
         sent_email = mail.outbox[0]
@@ -1836,16 +1829,16 @@ class BackupCommandS3Tests(TestCase):
         self.assertIn(self.superuser.email, sent_email.to)
         self.assertIn("successfully completed", sent_email.body)
 
-    @mock.patch("utils.management.commands.backup.boto.s3.connect_to_region")
+    @mock.patch("utils.management.commands.backup.boto3.client")
     @mock.patch("utils.management.commands.backup.call_command")
     def test_handle_s3_upload_failure_sends_error_email(
-        self, mock_dumpdata, connect_to_region
+        self, mock_dumpdata, mock_client
     ):
-        connect_to_region.side_effect = Exception("Could not reach S3 endpoint")
+        mock_client.side_effect = Exception("Could not reach S3 endpoint")
 
         call_command("backup")
 
-        connect_to_region.assert_called_once()
+        mock_client.assert_called_once()
         self.assertEqual(len(mail.outbox), 1)
         sent_email = mail.outbox[0]
         self.assertEqual(sent_email.subject, "Backup")
