@@ -1,7 +1,7 @@
 # CVE-2026-54273 et al.
-aiohttp~=3.14.1
-# GHSA-537c-gmf6-5ccf
-cryptography~=48.0.1
+aiohttp >= 3.14.2
+# GHSA-537c-gmf6-5ccf et al.
+cryptography >= 50.0.0
 # CVE-2026-59890
 setuptools~=83.0.0
 # CVE-2026-49477 CVE-2026-49476
