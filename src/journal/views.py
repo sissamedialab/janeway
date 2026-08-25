@@ -70,7 +70,6 @@ logger = get_logger(__name__)
 
 
 @has_journal
-@decorators.frontend_enabled
 def home(request):
     """Renders a journal homepage.
 
@@ -2107,7 +2106,8 @@ def contact(request):
             )
             return redirect(reverse("contact"))
 
-    if request.journal and request.journal.disable_front_end:
+    # Condition invalidated instead of removed to reduce the chance of conflicts
+    if False and request.journal and request.journal.disable_front_end:
         template = "admin/journal/contact.html"
     elif request.journal:
         template = "journal/contact.html"
@@ -2121,7 +2121,6 @@ def contact(request):
     return render(request, template, context)
 
 
-@decorators.frontend_enabled
 def editorial_team(request, group_id=None):
     """
     Displays a list of editorial team members at the journal level,
@@ -2345,7 +2344,8 @@ def submissions(request):
     """
     template = "journal/submissions.html"
 
-    if request.journal.disable_front_end:
+    # Condition invalidated instead of removed to reduce the chance of conflicts
+    if False and request.journal.disable_front_end:
         template = "admin/journal/submissions.html"
 
     context = {
