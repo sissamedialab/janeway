@@ -2826,6 +2826,7 @@ def doi_redirect(request, identifier_type, identifier):
     return redirect(article_object.local_url)
 
 
+@decorators.frontend_enabled
 def serve_article_xml(request, identifier_type, identifier):
     article_object = submission_models.Article.get_article(
         request.journal,
@@ -2857,6 +2858,7 @@ def serve_article_xml(request, identifier_type, identifier):
     )
 
 
+@decorators.frontend_enabled
 def serve_article_ris(request, identifier_type, identifier):
     article = submission_models.Article.get_article(
         request.journal,
@@ -2876,6 +2878,7 @@ def serve_article_ris(request, identifier_type, identifier):
     return response
 
 
+@decorators.frontend_enabled
 def serve_article_bib(request, identifier_type, identifier):
     article = submission_models.Article.get_article(
         request.journal,
@@ -2894,7 +2897,7 @@ def serve_article_bib(request, identifier_type, identifier):
 
     return response
 
-
+@decorators.frontend_enabled
 def serve_article_pdf(request, identifier_type, identifier):
     article_object = submission_models.Article.get_article(
         request.journal,
