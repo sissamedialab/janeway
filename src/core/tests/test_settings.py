@@ -1,3 +1,6 @@
+import datetime
+
+from django import forms
 from django.conf import settings
 from django.test import TestCase, override_settings
 
@@ -279,3 +282,30 @@ class TestSettingHandler(TestCase):
 
         self.assertEqual(result, setting_value)
         self.assertEqual(xl_result, xl_setting_value)
+
+
+class TestDateInputFormat(TestCase):
+    """
+    Django 5.0 removed USE_L10N (it's now always effectively True), so DateInput widgets
+    render/parse using the active locale's own DATE_INPUT_FORMATS instead of a fixed one.
+    Several of Janeway's configured LANGUAGES (fr, de, nl, cy, es) don't list ISO 8601
+    ("%Y-%m-%d") first -- and HTML5 <input type="date"> requires an exact ISO value or the
+    browser silently discards it, so any DateField rendered under one of those active
+    languages appears empty regardless of what initial value the view/form computed.
+    See wjs/plugins/wjs_review's EvaluateReviewForm.date_due and DecisionForm.date_due for
+    two concrete, reported instances of this.
+    """
+
+    def test_date_widget_renders_iso_value_in_every_configured_language(self):
+        field = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+        value = datetime.date(2026, 9, 15)
+        for language_code, _label in settings.LANGUAGES:
+            with helpers.activate_translation(language_code):
+                rendered = field.widget.render("date_due", value)
+            self.assertIn(
+                'value="2026-09-15"',
+                rendered,
+                f"DateInput did not render an ISO 8601 value under language "
+                f"{language_code!r} -- an HTML5 <input type=\"date\"> would show this "
+                f"field as empty in that language.",
+            )

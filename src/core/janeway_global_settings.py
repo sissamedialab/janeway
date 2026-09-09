@@ -277,6 +277,16 @@ MEDIA_URL = "/media/"
 USE_I18N = True
 USE_TZ = True
 
+# Django 5.0 removed USE_L10N (it is now always effectively True), which means
+# DateInput/DateTimeInput/TimeInput widgets render/parse using the active locale's
+# own format lists. Several of the LANGUAGES above don't list ISO 8601 first, which
+# breaks HTML5 <input type="date"> widgets (they require an exact ISO value or the
+# browser discards it) -- see core/formats/ and core/tests/test_settings.py
+# ::TestDateInputFormat.
+FORMAT_MODULE_PATH = [
+    "core.formats",
+]
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.7/howto/static-files/
