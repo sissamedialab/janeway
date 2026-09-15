@@ -105,10 +105,9 @@ class ArticleAdmin(admin_utils.JanewayModelAdmin):
         "supplementary_files",
         "publisher_notes",
     )
-    filter_horizontal = (
-        "authors",
-        "keywords",
-    )
+    # 'keywords' is a M2M with an explicit through model, so it cannot be
+    # listed here (admin.E013). It is managed by KeywordArticleInline below.
+    filter_horizontal = ("authors",)
 
     inlines = [
         admin_utils.IdentifierInline,
