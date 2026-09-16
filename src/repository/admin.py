@@ -119,7 +119,9 @@ class PreprintAdmin(admin.ModelAdmin):
         "article__pk",
         "article__title",
     )
-    filter_horizontal = ("keywords",)
+    # 'keywords' is a M2M with an explicit through model, so it cannot be
+    # listed in filter_horizontal (admin.E013). It is managed by
+    # KeywordPreprintInline below.
     date_hierarchy = "date_submitted"
 
     inlines = [

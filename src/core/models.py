@@ -1468,9 +1468,12 @@ class File(AbstractLastModifiedModel):
             self.text.update_contents(preprocessed_text)
             indexed = True
         else:
+            # 'file' is the reverse accessor of File.text, not a field on
+            # FileText, so it cannot be passed to create() -- Django 5.0
+            # rejects reverse one-to-one names explicitly. The relation is
+            # established by the assignment below.
             file_text_obj = FileTextModel.objects.create(
                 contents=preprocessed_text,
-                file=self,
             )
             self.text = file_text_obj
             if save:

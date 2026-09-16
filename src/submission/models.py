@@ -763,7 +763,9 @@ class PublisherNote(AbstractLastModifiedModel):
 
 class KeywordGroup(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)
-    parent_group = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT)
+    parent_group = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT
+    )
     order = models.PositiveIntegerField(default=1)
     notes = models.TextField(blank=True, null=True)
 
@@ -773,7 +775,13 @@ class KeywordGroup(models.Model):
 
 class Keyword(models.Model):
     word = models.CharField(max_length=200, unique=True)
-    group = models.ForeignKey("submission.KeywordGroup", null=True, blank=True, on_delete=models.PROTECT, related_name="keywords")
+    group = models.ForeignKey(
+        "submission.KeywordGroup",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="keywords",
+    )
     created = models.DateTimeField(auto_now_add=True)
     deactivated = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
@@ -1805,7 +1813,7 @@ class Article(AbstractLastModifiedModel):
 
     def get_remote_url(self, request):
         parsed_uri = urlparse(
-            "http" + ("", "s")[request.is_secure()] + "://" + request.META["HTTP_HOST"]
+            "http" + ("", "s")[request.is_secure()] + "://" + request.headers["host"]
         )
         domain = "{uri.scheme}://{uri.netloc}".format(uri=parsed_uri)
         url = domain + self.local_url

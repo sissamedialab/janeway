@@ -1,4 +1,5 @@
-from django.urls import re_path, include
+from django.urls import path
+from django.urls import include
 
 from rest_framework import routers
 from rest_framework.schemas import get_schema_view
@@ -19,17 +20,17 @@ router.register(r"accounts", views.AccountViewSet, "accounts")
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
-    re_path(r"^", include(router.urls)),
-    re_path(r"^oai/$", oai_views.oai_view_factory, name="OAI_list_records"),
-    re_path(r"^kbart/$", views.kbart, name="kbart"),
-    re_path(r"^kbart/csv$", views.kbart_csv, name="kbart"),
-    re_path(
-        r"^schema/$",
+    path("", include(router.urls)),
+    path("oai/", oai_views.oai_view_factory, name="OAI_list_records"),
+    path("kbart/", views.kbart, name="kbart"),
+    path("kbart/csv", views.kbart_csv, name="kbart"),
+    path(
+        "schema/",
         get_schema_view(
             title="Janeway API", description="API for Janeway", version="0.0.1"
         ),
         name="openapi-schema",
     ),
-    re_path(r"^swagger_ui/$", views.swagger_ui, name="swagger_ui"),
-    re_path(r"^redoc/$", views.redoc, name="redoc"),
+    path("swagger_ui/", views.swagger_ui, name="swagger_ui"),
+    path("redoc/", views.redoc, name="redoc"),
 ]

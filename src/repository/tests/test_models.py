@@ -3,7 +3,7 @@ __author__ = "Andy Byers, Mauro Sanchez & Joseph Muller"
 __license__ = "AGPL v3"
 __maintainer__ = "Birkbeck Centre for Technology and Publishing"
 
-import mock
+from unittest import mock
 from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 

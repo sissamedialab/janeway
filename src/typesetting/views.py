@@ -971,7 +971,7 @@ def typesetting_delete_correction(request, correction_id):
                 messages.INFO,
                 "Confirmed",
             )
-    return redirect(request.META.get("HTTP_REFERER"))
+    return redirect(request.headers.get("referer"))
 
 
 @decorators.has_journal
@@ -1361,7 +1361,7 @@ def typesetting_proofing_download(request, article_id, assignment_id, file_id):
             messages.WARNING,
             "Requested file is not a typeset file for proofing",
         )
-        return redirect(request.META.get("HTTP_REFERER"))
+        return redirect(request.headers.get("referer"))
 
 
 @security.can_preview_typesetting_article
@@ -1479,4 +1479,4 @@ def mint_supp_doi(request, supp_file_id):
                 "Minted DOI for supplementary file #%d" % supp_file.pk,
             )
 
-    return redirect(request.META.get("HTTP_REFERER"))
+    return redirect(request.headers.get("referer"))

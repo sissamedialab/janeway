@@ -98,7 +98,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "foundationform",
     "materializecssform",
-    "captcha",
+    "django_recaptcha",
     "simplemathcaptcha",
     "simple_history",
     "hijack",
@@ -107,6 +107,14 @@ INSTALLED_APPS = [
     # Forms
     "django.forms",
 ]
+
+if IN_TEST_RUNNER and "debug_toolbar" not in INSTALLED_APPS:
+    # core/urls.py routes the debug toolbar under the test runner as well as
+    # under DEBUG. Since django-debug-toolbar 7.0 importing debug_toolbar.urls
+    # pulls in a real HistoryEntry model, which Django refuses to load unless
+    # the app is registered. Register the app for the model's sake only -- the
+    # middleware stays dev-only, so debug_toolbar.W001 is silenced below.
+    INSTALLED_APPS.append("debug_toolbar")
 
 INSTALLED_APPS += plugin_installed_apps.load_plugin_apps(BASE_DIR)
 INSTALLED_APPS += plugin_installed_apps.load_homepage_element_apps(BASE_DIR)
@@ -267,8 +275,17 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
 
 USE_I18N = True
-USE_L10N = False
 USE_TZ = True
+
+# Django 5.0 removed USE_L10N (it is now always effectively True), which means
+# DateInput/DateTimeInput/TimeInput widgets render/parse using the active locale's
+# own format lists. Several of the LANGUAGES above don't list ISO 8601 first, which
+# breaks HTML5 <input type="date"> widgets (they require an exact ISO value or the
+# browser discards it) -- see core/formats/ and core/tests/test_settings.py
+# ::TestDateInputFormat.
+FORMAT_MODULE_PATH = [
+    "core.formats",
+]
 
 
 # Static files (CSS, JavaScript, Images)
@@ -383,6 +400,12 @@ SUMMERNOTE_CONFIG = {
 # 1.9 appears confused about where null and blank are required for many to
 # many fields, so we're hiding these warning from the console
 SILENCED_SYSTEM_CHECKS = ("fields.W340",)
+
+if IN_TEST_RUNNER:
+    # debug_toolbar is installed under the test runner only so that its
+    # HistoryEntry model can be imported (see INSTALLED_APPS above). Its
+    # middleware is deliberately not enabled, so W001 is expected.
+    SILENCED_SYSTEM_CHECKS += ("debug_toolbar.W001",)
 
 LOGGING = {
     "version": 1,
@@ -551,6 +574,16 @@ if IN_TEST_RUNNER and "--keepdb" not in COMMAND:
 
         def __contains__(self, key):
             return True
+
+        def setdefault(self, key, default=None):
+            """Accepts, and ignores, third-party attempts to skip migrations
+
+            django-debug-toolbar's AppConfig.ready() calls
+            settings.MIGRATION_MODULES.setdefault() to hide its own
+            migrations. Every key here already maps to None, so there is
+            nothing to store; this Mapping stays read-only.
+            """
+            return None
 
         def __iter__(self):
             return iter("")

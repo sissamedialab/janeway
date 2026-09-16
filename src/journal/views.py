@@ -70,7 +70,6 @@ logger = get_logger(__name__)
 
 
 @has_journal
-@decorators.frontend_enabled
 def home(request):
     """Renders a journal homepage.
 
@@ -2107,7 +2106,8 @@ def contact(request):
             )
             return redirect(reverse("contact"))
 
-    if request.journal and request.journal.disable_front_end:
+    # Condition invalidated instead of removed to reduce the chance of conflicts
+    if False and request.journal and request.journal.disable_front_end:
         template = "admin/journal/contact.html"
     elif request.journal:
         template = "journal/contact.html"
@@ -2121,7 +2121,6 @@ def contact(request):
     return render(request, template, context)
 
 
-@decorators.frontend_enabled
 def editorial_team(request, group_id=None):
     """
     Displays a list of editorial team members at the journal level,
@@ -2345,7 +2344,8 @@ def submissions(request):
     """
     template = "journal/submissions.html"
 
-    if request.journal.disable_front_end:
+    # Condition invalidated instead of removed to reduce the chance of conflicts
+    if False and request.journal.disable_front_end:
         template = "admin/journal/submissions.html"
 
     context = {
@@ -2826,6 +2826,7 @@ def doi_redirect(request, identifier_type, identifier):
     return redirect(article_object.local_url)
 
 
+@decorators.frontend_enabled
 def serve_article_xml(request, identifier_type, identifier):
     article_object = submission_models.Article.get_article(
         request.journal,
@@ -2857,6 +2858,7 @@ def serve_article_xml(request, identifier_type, identifier):
     )
 
 
+@decorators.frontend_enabled
 def serve_article_ris(request, identifier_type, identifier):
     article = submission_models.Article.get_article(
         request.journal,
@@ -2876,6 +2878,7 @@ def serve_article_ris(request, identifier_type, identifier):
     return response
 
 
+@decorators.frontend_enabled
 def serve_article_bib(request, identifier_type, identifier):
     article = submission_models.Article.get_article(
         request.journal,
@@ -2894,7 +2897,7 @@ def serve_article_bib(request, identifier_type, identifier):
 
     return response
 
-
+@decorators.frontend_enabled
 def serve_article_pdf(request, identifier_type, identifier):
     article_object = submission_models.Article.get_article(
         request.journal,
