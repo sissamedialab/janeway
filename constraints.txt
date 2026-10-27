@@ -4,8 +4,8 @@ aiohttp >= 3.14.4
 cryptography >= 50.0.0
 # CVE-2026-104874
 multidict >= 6.9.1
-# CVE-2026-59890
-setuptools~=83.0.0
+# GHSA-xmj3-9gf7-h52w
+setuptools~=84.1.0
 # CVE-2026-49477 CVE-2026-49476
 soupsieve >= 2.8.4
 # GHSA-8rrh-rw8j-w5fx
