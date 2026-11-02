@@ -43,7 +43,7 @@ packaging~=26.3
 pdfkit==1.0.0
 pdfminer.six~=20251230.0
 psycopg[binary]~=3.3.4
-pyasn1~=0.6.4
+pyasn1~=0.6.5
 PyJWT~=2.15.0
 Pillow~=13.0.0
 python-crontab~=3.3.0
