@@ -21,7 +21,7 @@
 
     <meta name="DC.Identifier.URI" content="{{ article.url }}"/>
     <meta name="DC.Language" scheme="ISO639-1" content="{{ article.language }}"/>
-    <meta name="DC.Rights" content="{{ article.licence.text | striptags }}"/>
+    {% if article.rights %}<meta name="DC.Rights" content="{{ article.rights | striptags }}"/>{% endif %}
     <meta name="DC.Source" content="{{ journal_settings.general.journal_name }}"/>
     <meta name="DC.Source.ISSN" content="{{ article.journal.issn }}"/>
     {% if article.issue.isbn %}<meta name="DC.Source.ISBN" content="{{ article.issue.isbn }}"/>{% endif %}
